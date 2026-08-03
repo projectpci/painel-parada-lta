@@ -148,6 +148,10 @@ body.role-viewer .edit-hint{display:none;}
   font-family:var(--mono);font-size:11px;padding:4px 7px;
   color-scheme:dark;
 }
+/* Alguns navegadores ignoram color-scheme no popup do <select> e renderizam
+   as opções com fundo claro do sistema — sem isso o texto branco fica
+   invisível até passar o mouse ou selecionar */
+select.database-input option{ background:#0A3B70; color:#fff; }
 
 /* ---------- layout ---------- */
 .page{max-width:1440px;margin:0 auto;padding:24px 28px 60px;}
@@ -319,25 +323,36 @@ select:focus, .search-input:focus{border-color:var(--info-blue);}
 .gran-btn.active{background:var(--navy);color:#fff;}
 .gran-btn:not(.active):hover{color:var(--text-hi);}
 
-.panel-with-rail{display:flex;gap:18px;align-items:flex-start;}
-.filter-rail{
-  width:186px;flex-shrink:0;display:flex;flex-direction:column;gap:16px;
-  background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px;
-}
+.filter-rail-title{font-family:var(--disp);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:0.02em;color:var(--text-hi);margin-bottom:2px;}
 .filter-rail-group{display:flex;flex-direction:column;gap:6px;}
 .filter-rail-label{
   font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim);
 }
-.filter-rail .granularity-toggle{flex-direction:column;background:var(--surface);}
-.filter-rail .gran-btn{text-align:left;width:100%;padding:7px 10px;}
-.filter-rail .expand-btn{width:100%;justify-content:flex-start;}
-.filter-rail .chart-gear{width:100%;}
-.filter-rail .chart-gear-panel{left:0;right:auto;}
-.panel-rail-main{flex:1;min-width:0;}
+.filter-rail-fixed .granularity-toggle{flex-direction:column;background:var(--surface-2);}
+.filter-rail-fixed .gran-btn{text-align:left;width:100%;padding:7px 10px;}
+.filter-rail-fixed .expand-btn{width:100%;justify-content:flex-start;}
+.filter-rail-fixed .chart-gear{width:100%;}
+.filter-rail-fixed .chart-gear-panel{left:0;right:auto;}
+.filter-rail-divider{height:1px;background:var(--border);margin:2px 0;}
+
+/* Filtros ficam fora da área de conteúdo — fixos na borda esquerda da tela,
+   sempre visíveis enquanto a aba (Curva S / Ganho de Horas) estiver ativa */
+.filter-rail-fixed{display:none;}
+.view.active .filter-rail-fixed{display:flex;flex-direction:column;gap:16px;}
+@media (min-width: 961px){
+  .view.active .filter-rail-fixed{
+    position:fixed;left:0;top:var(--topbar-h, 78px);bottom:0;width:206px;
+    background:var(--surface);border-right:1px solid var(--border);
+    padding:18px 16px;overflow-y:auto;z-index:30;
+  }
+  body.has-fixed-filter-rail .page{padding-left:calc(28px + 206px);}
+}
 @media (max-width: 960px){
-  .panel-with-rail{flex-direction:column;}
-  .filter-rail{width:100%;flex-direction:row;flex-wrap:wrap;align-items:flex-start;}
-  .filter-rail-group{flex:1;min-width:140px;}
+  .view.active .filter-rail-fixed{
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:16px;margin-bottom:20px;flex-direction:row;flex-wrap:wrap;
+  }
+  .filter-rail-fixed .filter-rail-group{flex:1;min-width:140px;}
 }
 
 .date-range-picker{display:flex;align-items:center;gap:6px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;}
@@ -1190,7 +1205,6 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
     <span class="updated-divider"></span>
     <div class="updated-group session-group">
       <span class="role-badge" id="role-badge" title="Clique para trocar de perfil"><span class="rb-dot"></span><span id="role-badge-label">Visualização</span></span>
-      <button class="docs-link-btn" id="change-pass-btn" data-role-only="admin" title="Alterar senha de administrador">🔑 Alterar Senha</button>
       <button class="docs-link-btn logout-btn" id="logout-btn" title="Sair e desconectar do painel">⏻ Sair</button>
     </div>
   </div>
@@ -1243,83 +1257,81 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
   <!-- ============ VIEW: CURVA S (AVANÇO FÍSICO) ============ -->
   <div class="view" id="view-curva">
 
+    <div class="filter-rail-fixed" id="curva-filter-fixed">
+      <div class="filter-rail-title">🔎 Filtros</div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Frente</div>
+        <div class="granularity-toggle" id="curva-frente-toggle">
+          <button class="gran-btn active" data-frente="geral">Geral</button>
+          <button class="gran-btn" data-frente="caldeira">Caldeira</button>
+          <button class="gran-btn" data-frente="conversor">Conversor</button>
+        </div>
+      </div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Granularidade</div>
+        <div class="granularity-toggle" id="curva-gran-toggle">
+          <button class="gran-btn" data-cgran="cut">Dia e Corte</button>
+          <button class="gran-btn active" data-cgran="day">Dia</button>
+          <button class="gran-btn" data-cgran="week">Semana</button>
+        </div>
+      </div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Visão</div>
+        <button class="expand-btn" id="curva-axis-compact-toggle" title="Mostrar todas as datas do eixo em formato compacto, sem rolagem">📏 Compacto</button>
+        <button class="expand-btn" id="curva-compact-toggle" title="Alternar entre visão detalhada e visão resumida (resumo total)">🗜 Resumo</button>
+      </div>
+      <div class="chart-gear" data-chart-key="curve">
+        <button class="chart-gear-btn" title="Configurações do gráfico">⚙</button>
+        <div class="chart-gear-panel">
+          <button class="cgp-action" data-action="download">⭳ Baixar</button>
+          <button class="cgp-action" data-action="expand">⤢ Expandir</button>
+          <div class="cgp-divider"></div>
+          <div class="cgp-row">
+            <span>🏷️ Rótulos</span>
+            <label class="pt-switch"><input type="checkbox" class="cgp-labels-toggle"><span class="pt-slider"></span></label>
+          </div>
+          <button class="cgp-action cgp-adjust-toggle">🎨 Ajustar rótulos <span class="cgp-caret">▾</span></button>
+          <div class="cgp-adjust-body">
+            <label class="cgp-field">Tamanho <input type="range" class="cgp-size" min="8" max="18" step="0.5"><span class="cgp-size-val"></span></label>
+            <label class="cgp-field">Cor <input type="color" class="cgp-color"></label>
+            <label class="cgp-field">Posição
+              <select class="cgp-position">
+                <option value="above">Acima</option>
+                <option value="below">Abaixo</option>
+                <option value="center">Centro</option>
+              </select>
+            </label>
+            <label class="cgp-field">Rotação
+              <select class="cgp-rotation">
+                <option value="0">Horizontal</option>
+                <option value="90">Vertical</option>
+              </select>
+            </label>
+            <label class="cgp-field">Casas decimais
+              <select class="cgp-decimals">
+                <option value="0">0</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="kpi-row" id="kpi-row-curva"></div>
 
     <div class="panel scroll-reveal" id="panel-curve">
       <div class="panel-head">
         <div class="panel-title">Curva S — Avanço Físico Acumulado (Previsto x Realizado)</div>
       </div>
-      <div class="panel-with-rail">
-        <div class="filter-rail">
-          <div class="filter-rail-group">
-            <div class="filter-rail-label">Frente</div>
-            <div class="granularity-toggle" id="curva-frente-toggle">
-              <button class="gran-btn active" data-frente="geral">Geral</button>
-              <button class="gran-btn" data-frente="caldeira">Caldeira</button>
-              <button class="gran-btn" data-frente="conversor">Conversor</button>
-            </div>
-          </div>
-          <div class="filter-rail-group">
-            <div class="filter-rail-label">Granularidade</div>
-            <div class="granularity-toggle" id="curva-gran-toggle">
-              <button class="gran-btn" data-cgran="cut">Dia e Corte</button>
-              <button class="gran-btn active" data-cgran="day">Dia</button>
-              <button class="gran-btn" data-cgran="week">Semana</button>
-            </div>
-          </div>
-          <div class="filter-rail-group">
-            <div class="filter-rail-label">Visão</div>
-            <button class="expand-btn" id="curva-axis-compact-toggle" title="Mostrar todas as datas do eixo em formato compacto, sem rolagem">📏 Compacto</button>
-            <button class="expand-btn" id="curva-compact-toggle" title="Alternar entre visão detalhada e visão resumida (resumo total)">🗜 Resumo</button>
-          </div>
-          <div class="chart-gear" data-chart-key="curve">
-            <button class="chart-gear-btn" title="Configurações do gráfico">⚙</button>
-            <div class="chart-gear-panel">
-              <button class="cgp-action" data-action="download">⭳ Baixar</button>
-              <button class="cgp-action" data-action="expand">⤢ Expandir</button>
-              <div class="cgp-divider"></div>
-              <div class="cgp-row">
-                <span>🏷️ Rótulos</span>
-                <label class="pt-switch"><input type="checkbox" class="cgp-labels-toggle"><span class="pt-slider"></span></label>
-              </div>
-              <button class="cgp-action cgp-adjust-toggle">🎨 Ajustar rótulos <span class="cgp-caret">▾</span></button>
-              <div class="cgp-adjust-body">
-                <label class="cgp-field">Tamanho <input type="range" class="cgp-size" min="8" max="18" step="0.5"><span class="cgp-size-val"></span></label>
-                <label class="cgp-field">Cor <input type="color" class="cgp-color"></label>
-                <label class="cgp-field">Posição
-                  <select class="cgp-position">
-                    <option value="above">Acima</option>
-                    <option value="below">Abaixo</option>
-                    <option value="center">Centro</option>
-                  </select>
-                </label>
-                <label class="cgp-field">Rotação
-                  <select class="cgp-rotation">
-                    <option value="0">Horizontal</option>
-                    <option value="90">Vertical</option>
-                  </select>
-                </label>
-                <label class="cgp-field">Casas decimais
-                  <select class="cgp-decimals">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="panel-rail-main">
-          <div class="chart-scroll-x" id="curve-chart-scroll"><div class="chart-wrap" id="curve-chart-wrap" style="height:360px;"><canvas id="chart-curve" height="360"></canvas></div></div>
-          <div class="legend" id="curve-legend-normal">
-            <div class="legend-item"><span class="legend-line" style="background:var(--navy)"></span> Previsto Acumulado (%)</div>
-            <div class="legend-item" id="legend-real" style="display:none;"><span class="legend-line" style="background:#6FA834;border-top:2px dashed #6FA834;height:0"></span> Real Acumulado (%)</div>
-            <div class="legend-item"><span class="legend-line" style="background:var(--red);border-top:2px dashed var(--red);height:0"></span> Data-base</div>
-          </div>
-          <div id="curva-compact-view" style="display:none;"></div>
-        </div>
+      <div class="chart-scroll-x" id="curve-chart-scroll"><div class="chart-wrap" id="curve-chart-wrap" style="margin-top:14px;height:360px;"><canvas id="chart-curve" height="360"></canvas></div></div>
+      <div class="legend" id="curve-legend-normal">
+        <div class="legend-item"><span class="legend-line" style="background:var(--navy)"></span> Previsto Acumulado (%)</div>
+        <div class="legend-item" id="legend-real" style="display:none;"><span class="legend-line" style="background:#6FA834;border-top:2px dashed #6FA834;height:0"></span> Real Acumulado (%)</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--red);border-top:2px dashed var(--red);height:0"></span> Data-base</div>
       </div>
+      <div id="curva-compact-view" style="display:none;"></div>
     </div>
 
   </div>
@@ -1329,31 +1341,27 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 
     <div class="kpi-row" id="kpi-row-ganho"></div>
 
+
+    <div class="filter-rail-fixed" id="ganho-filter-fixed">
+      <div class="filter-rail-title">🔎 Filtros</div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Período</div>
+        <div class="granularity-toggle" id="ganho-periodo-toggle">
+          <button class="gran-btn active" data-periodo="database">Até Data-base</button>
+          <button class="gran-btn" data-periodo="completo">Período Completo</button>
+        </div>
+      </div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Exportar</div>
+        <button class="expand-btn" id="ganho-download-btn" title="Baixar este gráfico como imagem">⭳ Baixar</button>
+      </div>
+    </div>
+
     <div class="panel scroll-reveal" id="panel-ganho-evolucao">
       <div class="panel-head">
         <div class="panel-title">Evolução do Ganho de Horas — Caminho Crítico</div>
       </div>
-      <div class="panel-with-rail">
-        <div class="filter-rail">
-          <div class="filter-rail-group">
-            <div class="filter-rail-label">Período</div>
-            <div class="granularity-toggle" id="ganho-periodo-toggle">
-              <button class="gran-btn active" data-periodo="database">Até Data-base</button>
-              <button class="gran-btn" data-periodo="completo">Período Completo</button>
-            </div>
-          </div>
-          <div class="filter-rail-group">
-            <div class="filter-rail-label">Planilha</div>
-            <button class="file-btn" id="ganho-upload-btn" data-role-only="admin" title="Carregar a planilha padrão de Variação de Horas (.xlsx)">⇪ Carregar planilha</button>
-            <input type="file" id="ganho-file-input" accept=".xlsx,.xls" style="display:none;">
-            <button class="expand-btn" id="ganho-download-btn" title="Baixar este gráfico como imagem">⭳ Baixar</button>
-          </div>
-        </div>
-        <div class="panel-rail-main">
-          <div id="ganho-upload-status" class="panel-note" style="display:none;"></div>
-          <div class="chart-wrap" style="height:320px;"><canvas id="chart-ganho-evolucao" height="320"></canvas></div>
-        </div>
-      </div>
+      <div class="chart-wrap" style="margin-top:14px;height:320px;"><canvas id="chart-ganho-evolucao" height="320"></canvas></div>
     </div>
 
     <div class="grid-2col">
@@ -2006,15 +2014,7 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 <div class="curve-overlay" id="curve-overlay">
   <div class="curve-overlay-head">
     <div class="curve-overlay-title">Curva S — Avanço Físico Acumulado (Previsto x Realizado)</div>
-    <button class="close-btn" id="collapse-btn">✕ Fechar</button>
-  </div>
-  <div class="curve-overlay-body panel-with-rail">
-    <div class="filter-rail">
-      <div class="filter-rail-group">
-        <div class="filter-rail-label">Visão</div>
-        <button class="expand-btn" id="curva-axis-compact-toggle-expanded" title="Mostrar todas as datas do eixo em formato compacto, sem rolagem">📏 Compacto</button>
-        <button class="expand-btn" id="curva-compact-toggle-expanded" title="Alternar entre visão detalhada e visão resumida (resumo total)">🗜 Resumo</button>
-      </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
       <div class="chart-gear" data-chart-key="curve">
         <button class="chart-gear-btn" title="Configurações do gráfico">⚙</button>
         <div class="chart-gear-panel">
@@ -2051,16 +2051,19 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
               </div>
         </div>
       </div>
+      <button class="expand-btn" id="curva-axis-compact-toggle-expanded" title="Mostrar todas as datas do eixo em formato compacto, sem rolagem">📏 Compacto</button>
+      <button class="expand-btn" id="curva-compact-toggle-expanded" title="Alternar entre visão detalhada e visão resumida (resumo total)">🗜 Resumo</button>
+      <button class="close-btn" id="collapse-btn">✕ Fechar</button>
     </div>
-    <div class="panel-rail-main">
-      <div class="chart-scroll-x" id="curve-chart-scroll-expanded" style="flex:1;min-height:0;"><div class="chart-wrap" id="curve-chart-wrap-expanded"><canvas id="chart-curve-expanded"></canvas></div></div>
-      <div class="legend" id="legend-expanded" style="justify-content:center;margin-top:6px;">
-        <div class="legend-item"><span class="legend-line" style="background:var(--navy)"></span> Previsto Acumulado (%)</div>
-        <div class="legend-item" id="legend-real-expanded" style="display:none;"><span class="legend-line" style="background:#6FA834;border-top:2px dashed #6FA834;height:0"></span> Real Acumulado (%)</div>
-        <div class="legend-item"><span class="legend-line" style="background:var(--red);border-top:2px dashed var(--red);height:0"></span> Data-base</div>
-      </div>
-      <div id="curva-compact-view-expanded" style="display:none;"></div>
+  </div>
+  <div class="curve-overlay-body">
+    <div class="chart-scroll-x" id="curve-chart-scroll-expanded" style="flex:1;min-height:0;"><div class="chart-wrap" id="curve-chart-wrap-expanded"><canvas id="chart-curve-expanded"></canvas></div></div>
+    <div class="legend" id="legend-expanded" style="justify-content:center;margin-top:6px;">
+      <div class="legend-item"><span class="legend-line" style="background:var(--navy)"></span> Previsto Acumulado (%)</div>
+      <div class="legend-item" id="legend-real-expanded" style="display:none;"><span class="legend-line" style="background:#6FA834;border-top:2px dashed #6FA834;height:0"></span> Real Acumulado (%)</div>
+      <div class="legend-item"><span class="legend-line" style="background:var(--red);border-top:2px dashed var(--red);height:0"></span> Data-base</div>
     </div>
+    <div id="curva-compact-view-expanded" style="display:none;"></div>
   </div>
 </div>
 
@@ -2220,23 +2223,19 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 
         <div class="settings-cat active" data-settingscat="dados">
           <div class="settings-section" style="padding-top:0;">
-            <div class="settings-section-title">⇪ Fonte de Dados (Punch List)</div>
-            <div class="dt-sub" id="datasource-sub">Exibindo dados de exemplo (modelo) · Total: <b id="ds-count">5</b> itens</div>
-            <span class="datasource-status ds-default" id="ds-status">Dados de exemplo</span>
-            <p class="panel-note" style="margin:8px 0 0;">Se a planilha tiver as duas abas (<b>Punch List Geral</b> e <b>Histograma</b>), os dois painéis são atualizados juntos com um único upload — não precisa subir duas vezes.</p>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-              <button class="file-btn" id="upload-btn">⇪ Carregar planilha atualizada (.xlsx)</button>
-              <button class="file-btn secondary" id="restore-btn">Restaurar exemplo</button>
-            </div>
-            <input type="file" id="file-input" accept=".xlsx,.xls">
+            <div class="settings-section-title">📈 Curva S — Avanço Físico</div>
+            <p class="panel-note" style="margin:0 0 10px;">Planilha do cronograma (4 abas) — usamos só a aba <b>"Cruva Geral"</b> por enquanto, com o Previsto e Real acumulado (Geral, Caldeira e Conversor) por corte. Um upload novo substitui a Curva S inteira.</p>
+            <button class="file-btn" id="curva-upload-btn">⇪ Carregar planilha do cronograma (.xlsx)</button>
+            <input type="file" id="curva-file-input" accept=".xlsx,.xls" style="display:none;">
+            <div id="curva-upload-status" class="panel-note" style="margin:8px 0 0;"></div>
           </div>
 
           <div class="settings-section">
-            <div class="settings-section-title">📊 Histograma de Mão de Obra</div>
-            <p class="panel-note" style="margin:0 0 10px;">Aceita a aba <b>Histograma</b> (modelo com blocos "Sem NN" e Prev./Real por semana) ou uma planilha simples com colunas <b>Disciplina</b>, <b>Data</b>, <b>Horas</b> e/ou <b>Efetivo</b>. Se a mesma planilha também tiver a aba "Punch List Geral", a Lista de Pendências é atualizada junto. Um upload novo substitui os dados de histograma anteriores.</p>
-            <button class="file-btn" id="hist-upload-btn">⇪ Carregar planilha de histograma (.xlsx)</button>
-            <input type="file" id="hist-file-input" accept=".xlsx,.xls" style="display:none;">
-            <div id="hist-upload-status" class="panel-note" style="margin:8px 0 0;"></div>
+            <div class="settings-section-title">⏱ Ganho de Horas — Variação de Horas</div>
+            <p class="panel-note" style="margin:0 0 10px;">Planilha "Variação de Datas" (Término Prev. / Datas de Corte / Atual Corte). Um upload novo substitui o Ganho de Horas inteiro pela versão mais recente.</p>
+            <button class="file-btn" id="ganho-upload-btn" title="Carregar a planilha padrão de Variação de Horas (.xlsx)">⇪ Carregar planilha de Variação de Horas (.xlsx)</button>
+            <input type="file" id="ganho-file-input" accept=".xlsx,.xls" style="display:none;">
+            <div id="ganho-upload-status" class="panel-note" style="margin:8px 0 0;"></div>
           </div>
 
           <div class="settings-section">
@@ -2283,6 +2282,12 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
         </div>
 
         <div class="settings-cat" data-settingscat="avancado">
+          <div class="settings-section" style="padding-top:0;">
+            <div class="settings-section-title">🔐 Segurança</div>
+            <p class="panel-note" style="margin:0 0 10px;">Troca a senha de acesso do perfil Administrador.</p>
+            <button class="admin-action-btn" id="change-pass-btn" data-role-only="admin">🔑 Alterar Senha</button>
+          </div>
+
           <div class="settings-section" style="padding-top:0;">
             <div class="settings-section-title">📌 Salvar Plano</div>
             <div class="admin-action-item">
@@ -4130,6 +4135,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-' + btn.dataset.view).classList.add('active');
+    document.body.classList.toggle('has-fixed-filter-rail', btn.dataset.view === 'curva' || btn.dataset.view === 'ganho');
     const hideFilterUI = btn.dataset.view === 'docs' || btn.dataset.view === 'hist' || btn.dataset.view === 'exec' || btn.dataset.view === 'curva' || btn.dataset.view === 'ganho';
     document.getElementById('filterbar').style.display = hideFilterUI ? 'none' : '';
     const alertBanner = document.getElementById('critical-alert-banner');
@@ -4145,6 +4151,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 // KPI
 // ===================================================================
 // separador decimal brasileiro (vírgula) — usado em toda a Curva S
+// evita rajadas de chamadas repetidas (ex: dezenas de eventos realtime de um
+// upload em massa) — só executa uma vez, "ms" depois da última chamada
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
 function fmtDec(value, decimals){
   if(value == null || isNaN(value)) return '—';
   return value.toFixed(decimals).replace('.', ',');
@@ -6478,6 +6491,7 @@ function parseSheet(rows){
 
 function setDataSourceStatus(kind, text){
   const el = document.getElementById('ds-status');
+  if(!el) return;
   el.className = 'datasource-status ' + (kind==='ok'?'ds-ok':kind==='err'?'ds-err':'ds-default');
   el.textContent = text;
 }
@@ -6502,13 +6516,14 @@ async function loadDataset(items, label, milestones, persist){
   SUM = computeSummary(ITEMS, state.today);
   resetFilters();
   buildChips();
-  document.getElementById('datasource-sub').innerHTML = `Exibindo <b>${label}</b> · Total: <b id="ds-count">${SUM.total}</b> itens`;
+  const dsSubEl = document.getElementById('datasource-sub');
+  if(dsSubEl) dsSubEl.innerHTML = `Exibindo <b>${label}</b> · Total: <b id="ds-count">${SUM.total}</b> itens`;
   if(persist && dbConnected) setDataSourceStatus('ok', '🟢 Salvo no banco — sincronizado em tempo real');
   renderAll();
 }
 
-document.getElementById('upload-btn').addEventListener('click', ()=> document.getElementById('file-input').click());
-document.getElementById('restore-btn').addEventListener('click', async ()=>{
+document.getElementById('upload-btn')?.addEventListener('click', ()=> document.getElementById('file-input').click());
+document.getElementById('restore-btn')?.addEventListener('click', async ()=>{
   if(!confirm('Isso vai gravar os dados de exemplo no banco de dados compartilhado, substituindo/mesclando com o que já existir. Continuar?')) return;
   setDataSourceStatus('default', 'Restaurando exemplo...');
   await loadDataset(JSON.parse(JSON.stringify(SAMPLE_ITEMS)), 'dados de exemplo (modelo)', JSON.parse(JSON.stringify(SAMPLE_MILESTONES)), true);
@@ -6555,7 +6570,7 @@ async function saveHistogramData(parsed, usedSheet){
   renderHistogramChart();
 }
 
-document.getElementById('file-input').addEventListener('change', async (e)=>{
+document.getElementById('file-input')?.addEventListener('change', async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   setDataSourceStatus('default', 'Lendo arquivo...');
@@ -6735,20 +6750,22 @@ function histogramRowToDbRow(r){
 // de fórmula). ganho_horas = (Término Previsto − Atual Corte) em horas —
 // positivo = adiantado (ganho, verde); negativo = atrasado (perda, vermelho).
 // ===================================================================
-function excelSerialToDate(v){
-  // XLSX com cellDates:true já entrega objetos Date; isso é só um fallback
-  // caso a célula venha como número serial do Excel
-  if(v instanceof Date) return v;
-  if(typeof v === 'number') return new Date(Math.round((v - 25569) * 86400 * 1000));
-  return null;
-}
-// converte um Date (montado pelo SheetJS a partir dos componentes UTC da
-// célula) numa string "de parede" sem sufixo de fuso — assim ninguém, nem
-// mais tarde nem em outro lugar do código, aplica conversão de timezone
-// nesses horários (que são sempre horário de Brasília, sem fuso real).
-function toNaiveISOString(date){
+// IMPORTANTE — descoberto por teste real: a opção cellDates:true do SheetJS
+// (biblioteca XLSX) monta o objeto Date internamente usando o fuso horário
+// LOCAL do navegador, então o mesmo arquivo .xlsx produz um horário DIFERENTE
+// dependendo de onde a pessoa está (testado e confirmado: em Brasília dava
+// +3h de desvio, em UTC não). Por isso NUNCA usamos cellDates aqui — lemos o
+// número serial bruto do Excel e convertemos nós mesmos, com aritmética pura,
+// sem passar por nenhum construtor de Date sensível a timezone.
+function excelSerialToNaiveISO(serial){
+  if(typeof serial !== 'number') return null;
+  const totalSeconds = Math.round(serial * 86400); // arredonda direto pro segundo mais próximo
+  const days = Math.floor(totalSeconds / 86400);
+  const secsInDay = totalSeconds - days * 86400;
+  const utcMs = (days - 25569) * 86400000 + secsInDay * 1000; // epoch UTC absoluto, sem timezone nenhum envolvido
+  const d = new Date(utcMs); // só um "carimbo" pra extrair os dígitos — sempre lido com getters UTC, nunca local
   const p = n => String(n).padStart(2, '0');
-  return `${date.getUTCFullYear()}-${p(date.getUTCMonth()+1)}-${p(date.getUTCDate())}T${p(date.getUTCHours())}:${p(date.getUTCMinutes())}:${p(date.getUTCSeconds())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())}T${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
 }
 // lê de volta uma string "de parede" (com ou sem sufixo de fuso, não importa
 // — só olha os dígitos) sem nunca instanciar Date/toLocaleString, que
@@ -6768,13 +6785,102 @@ function parseCorteLabel(raw){
   const [, dd, mm, yyyy, hh, mi] = m;
   return { data: `${yyyy}-${mm}-${dd}`, hora: `${hh}:${mi}` };
 }
+
+// ===================================================================
+// IMPORTAÇÃO — CURVA S (planilha do cronograma, aba "Cruva Geral" —
+// atenção: o nome vem com esse erro de digitação na planilha padrão)
+// Layout fixo: uma linha "Descrição" com os cortes (colunas), e pares de
+// linhas "<Frente> - Prev. Ac." / "<Frente> - Real Ac." para Geral,
+// Caldeira e Conversor. Os valores vêm como fração (0.11 = 0,11%) — aqui
+// convertemos pra percentual (×100), que é o que o resto do painel espera.
+// ===================================================================
+function extractCurvaFromWorkbook(wb){
+  const names = wb.SheetNames;
+  // aceita "Curva Geral" ou "Cruva Geral" (erro de digitação comum na planilha padrão)
+  const preferred = names.find(n => /cr?uva/i.test(n) && /geral/i.test(n))
+    || names.find(n => /cr?uva/i.test(n))
+    || names[0];
+  const ws = wb.Sheets[preferred];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if(!rows || rows.length < 5) return null;
+
+  const findRow = (...substrings) => rows.find(r => r && typeof r[0] === 'string' &&
+    substrings.every(s => r[0].toLowerCase().includes(s)));
+  const rowHeader = findRow('descri');
+  const frentes = [
+    {key:'geral', rowPrev: findRow('geral', 'prev', 'ac'), rowReal: findRow('geral', 'real', 'ac')},
+    {key:'caldeira', rowPrev: findRow('caldeira', 'prev', 'ac'), rowReal: findRow('caldeira', 'real', 'ac')},
+    {key:'conversor', rowPrev: findRow('conversor', 'prev', 'ac'), rowReal: findRow('conversor', 'real', 'ac')},
+  ];
+  if(!rowHeader || frentes.some(f => !f.rowPrev || !f.rowReal)) return null;
+
+  const parsed = [];
+  for(let col = 1; col < rowHeader.length; col++){
+    const corte = parseCorteLabel(rowHeader[col]);
+    if(!corte) continue;
+    frentes.forEach(f=>{
+      const prev = f.rowPrev[col];
+      const real = f.rowReal[col];
+      parsed.push({
+        data: corte.data, hora: corte.hora, frente: f.key,
+        prev_pct: typeof prev === 'number' ? Math.round(prev*100*10000)/10000 : null,
+        real_pct: typeof real === 'number' ? Math.round(real*100*10000)/10000 : null,
+      });
+    });
+  }
+  if(parsed.length === 0) return null;
+  return { parsed, usedSheet: preferred };
+}
+function curvaRowToDbRow(r){
+  return { data: r.data, hora: r.hora, frente: r.frente, prev_pct: r.prev_pct, real_pct: r.real_pct };
+}
+async function saveCurvaData(parsed, usedSheet){
+  const statusEl = document.getElementById('curva-upload-status');
+  if(dbConnected){
+    if(statusEl) statusEl.textContent = 'Salvando Curva S no banco...';
+    const {error: delError} = await sb.from('curva_avanco').delete().not('data', 'is', null);
+    if(delError) throw delError;
+    await chunkedUpsert('curva_avanco', parsed.map(curvaRowToDbRow));
+    CURVA_ITEMS = parsed;
+    if(statusEl) statusEl.textContent = `✓ Salvo no banco — ${parsed.length} registros (aba "${usedSheet}")`;
+  } else {
+    CURVA_ITEMS = parsed;
+    if(statusEl) statusEl.textContent = `⚠ Sem conexão com o banco — carregado só nesta sessão (${parsed.length} registros)`;
+  }
+  if(document.getElementById('view-curva')?.classList.contains('active')) renderCurve();
+}
+document.getElementById('curva-upload-btn')?.addEventListener('click', ()=> document.getElementById('curva-file-input').click());
+document.getElementById('curva-file-input')?.addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('curva-upload-status');
+  statusEl.textContent = 'Lendo arquivo...';
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, {type:'array'});
+    const result = extractCurvaFromWorkbook(wb);
+    if(!result){
+      statusEl.textContent = '⚠ Não foi possível reconhecer a planilha. Esperado: aba "Cruva Geral" (ou "Curva Geral") com as linhas de Descrição e Prev./Real Acumulado por frente.';
+      return;
+    }
+    await saveCurvaData(result.parsed, result.usedSheet);
+    showToast('Curva S atualizada', 'ok');
+  } catch(err){
+    console.error(err);
+    statusEl.textContent = '⚠ Não foi possível carregar a planilha. Verifique se a tabela "curva_avanco" existe no banco.';
+  } finally {
+    e.target.value = '';
+  }
+});
+
 function extractGanhoFromWorkbook(wb){
   // procura a aba certa: prioriza nome com "variação"/"variacao", senão tenta a primeira
   const names = wb.SheetNames;
   const preferred = names.find(n => /varia[cç][aã]o/i.test(n)) || names[0];
   const ws = wb.Sheets[preferred];
   if(!ws) return null;
-  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null, cellDates:true});
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
   if(!rows || rows.length < 3) return null;
 
   // localiza as linhas pelo rótulo da coluna A, sem depender de posição fixa
@@ -6784,20 +6890,22 @@ function extractGanhoFromWorkbook(wb){
   const rowAtual = findRow('atual corte');
   if(!rowTermino || !rowCortes || !rowAtual) return null;
 
-  const terminoPrev = excelSerialToDate(rowTermino[1]);
-  if(!terminoPrev) return null;
+  const terminoPrevISO = excelSerialToNaiveISO(rowTermino[1]);
+  if(!terminoPrevISO) return null;
+  const terminoPrevMs = Date.parse(terminoPrevISO + 'Z'); // só pra fazer a subtração; ambos os lados vêm do mesmo conversor naive, então é seguro
 
   const parsed = [];
   for(let col = 1; col < rowCortes.length; col++){
     const corte = parseCorteLabel(rowCortes[col]);
     if(!corte) continue;
-    const atual = excelSerialToDate(rowAtual[col]);
-    if(!atual) continue; // corte ainda sem medição — não entra na tabela
-    const ganho = (terminoPrev.getTime() - atual.getTime()) / 3600000;
-    parsed.push({ data: corte.data, hora: corte.hora, atual_corte: toNaiveISOString(atual), ganho_horas: Math.round(ganho*1000)/1000 });
+    const atualISO = excelSerialToNaiveISO(rowAtual[col]);
+    if(!atualISO) continue; // corte ainda sem medição — não entra na tabela
+    const atualMs = Date.parse(atualISO + 'Z');
+    const ganho = (terminoPrevMs - atualMs) / 3600000;
+    parsed.push({ data: corte.data, hora: corte.hora, atual_corte: atualISO, ganho_horas: Math.round(ganho*1000)/1000 });
   }
   if(parsed.length === 0) return null;
-  return { parsed, terminoPrev: toNaiveISOString(terminoPrev), usedSheet: preferred };
+  return { parsed, terminoPrev: terminoPrevISO, usedSheet: preferred };
 }
 function ganhoRowToDbRow(r){
   return { data: r.data, hora: r.hora, atual_corte: r.atual_corte, ganho_horas: r.ganho_horas };
@@ -6831,7 +6939,7 @@ document.getElementById('ganho-file-input')?.addEventListener('change', async (e
   statusEl.textContent = 'Lendo arquivo...';
   try{
     const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array', cellDates:true});
+    const wb = XLSX.read(buf, {type:'array'});
     const result = extractGanhoFromWorkbook(wb);
     if(!result){
       statusEl.textContent = '⚠ Não foi possível reconhecer a planilha. Esperado: aba com as linhas "Término Prev.", "Datas de Corte" e "Atual Corte".';
@@ -8190,11 +8298,17 @@ function setupRealtime(){
   sb.channel('marcos-rt')
     .on('postgres_changes', {event:'*', schema:'public', table:'marcos'}, p => applyRealtimeChange('marcos', p))
     .subscribe();
+  // debounce: um upload de planilha dispara dezenas de eventos (um delete/insert
+  // por linha) em rajada — sem isso, cada evento recarregava e recriava os
+  // gráficos, causando um "tremor" visual e, pior, podia renderizar um estado
+  // parcial no meio da transação. Só re-busca uma vez, depois que a rajada acalma.
+  const fetchCurvaDebounced = debounce(fetchCurvaFromSupabase, 700);
+  const fetchGanhoDebounced = debounce(fetchGanhoFromSupabase, 700);
   sb.channel('curva_avanco-rt')
-    .on('postgres_changes', {event:'*', schema:'public', table:'curva_avanco'}, () => fetchCurvaFromSupabase())
+    .on('postgres_changes', {event:'*', schema:'public', table:'curva_avanco'}, () => fetchCurvaDebounced())
     .subscribe();
   sb.channel('ganho_horas-rt')
-    .on('postgres_changes', {event:'*', schema:'public', table:'ganho_horas'}, () => fetchGanhoFromSupabase())
+    .on('postgres_changes', {event:'*', schema:'public', table:'ganho_horas'}, () => fetchGanhoDebounced())
     .subscribe();
 }
 
@@ -8261,7 +8375,8 @@ async function bootstrap(){
 
   SUM = computeSummary(ITEMS, state.today);
   buildChips();
-  document.getElementById('datasource-sub').innerHTML = `Exibindo ${dataLabel} · Total: <b id="ds-count">${SUM.total}</b> itens`;
+  const dsSubEl2 = document.getElementById('datasource-sub');
+  if(dsSubEl2) dsSubEl2.innerHTML = `Exibindo ${dataLabel} · Total: <b id="ds-count">${SUM.total}</b> itens`;
   renderAll();
   updateCurrentWeekBadge();
   applyDefaultFilterbarState();
