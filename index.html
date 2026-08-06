@@ -1655,11 +1655,7 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 
     <div class="kpi-row" id="kpi-row-controlehh"></div>
 
-    <div class="grid-3col">
-      <div class="panel scroll-reveal">
-        <div class="panel-head"><div class="panel-title">Utilização do Orçamento</div></div>
-        <div id="chart-hh-gauge" style="margin-top:6px;"></div>
-      </div>
+    <div class="grid-2col">
       <div class="panel scroll-reveal">
         <div class="panel-head"><div class="panel-title">Fluxo do Orçamento (HH)</div></div>
         <div id="chart-hh-waterfall" style="margin-top:6px;"></div>
@@ -4875,10 +4871,27 @@ function buildCurvaBuckets(frente, granularity){
       buckets.push(b);
     }
     b.sortKey = curvaSortKey(r); // sempre o corte mais recente do balde
-    if(r.prev_pct != null) b.prev_pct = Number(r.prev_pct); // sempre pega o último (previsto não regride)
-    // Real só entra se o corte já passou do horário-referência escolhido pra data-base
-    // (06h/15h) — corta o dado de qualquer corte futuro à frente do "agora" selecionado
-    if(r.real_pct != null && curvaSortKey(r) <= nowKey) b.real_pct = Number(r.real_pct);
+    if(granularity === 'day'){
+      // um dia tem 2 cortes (06h/15h) — só o corte que bate com o filtro
+      // "Corte" selecionado no topo do painel deve valer pro dia; sem isso,
+      // o último corte processado (15h) sempre sobrescrevia o valor do dia
+      // inteiro, ignorando a seleção de 06h.
+      const corteAlvo = state.curvaCorteHora || '15:00';
+      if(r.hora === corteAlvo){
+        if(r.prev_pct != null) b.prev_pct = Number(r.prev_pct);
+        if(r.real_pct != null && curvaSortKey(r) <= nowKey) b.real_pct = Number(r.real_pct);
+      } else if(b.prev_pct == null && r.prev_pct != null){
+        // fallback: se o dia não tiver corte exatamente nesse horário, usa o
+        // que existir, pra não deixar o dia em branco no gráfico
+        b.prev_pct = Number(r.prev_pct);
+        if(r.real_pct != null && curvaSortKey(r) <= nowKey) b.real_pct = Number(r.real_pct);
+      }
+    } else {
+      if(r.prev_pct != null) b.prev_pct = Number(r.prev_pct); // sempre pega o último (previsto não regride)
+      // Real só entra se o corte já passou do horário-referência escolhido pra data-base
+      // (06h/15h) — corta o dado de qualquer corte futuro à frente do "agora" selecionado
+      if(r.real_pct != null && curvaSortKey(r) <= nowKey) b.real_pct = Number(r.real_pct);
+    }
     b.label = label; // garante rótulo coerente mesmo se a 1ª linha do balde não tiver os dois campos
   });
   return buckets;
@@ -5799,7 +5812,7 @@ function controleHHTotais(){
   const ocAprovadas = soma('oc_aprovadas');
   const ocEmAprovacao = soma('oc_em_aprovacao');
   const indiceAprovacao = (ocAprovadas + ocEmAprovacao) > 0 ? (ocAprovadas / (ocAprovadas + ocEmAprovacao)) * 100 : null;
-  return { rows, hhOrcado, hhConsumida, hhComprometida, hhEmAprovacao, hhAguardando, presupuestoAtual, saldo, forecast, desvio, desvioPct, pctUtilizado, burnRate, indiceAprovacao };
+  return { rows, hhOrcado, hhConsumida, hhComprometida, hhEmAprovacao, hhAguardando, presupuestoAtual, saldo, forecast, desvio, desvioPct, pctUtilizado, burnRate, indiceAprovacao, ocAprovadas, ocEmAprovacao };
 }
 
 function renderControleHHKpis(){
@@ -5811,42 +5824,32 @@ function renderControleHHKpis(){
     return;
   }
   const fmtHH = (v)=> fmtMilhar(v,0)+' HH';
+  const somaTotalOrcadoAguardando = t.hhOrcado + t.hhAguardando;
+  const hhSaldo = t.hhOrcado - t.hhConsumida; // saldo do total JÁ aprovado
+  const saldoTotalContrato = somaTotalOrcadoAguardando - t.hhConsumida; // saldo considerando também o que ainda está aguardando aprovação
+  const pctConsumidoTotal = somaTotalOrcadoAguardando > 0 ? (t.hhConsumida / somaTotalOrcadoAguardando) * 100 : 0;
   el.innerHTML = [
+    // 1) visão geral do orçamento total (aprovado + em análise)
+    kpiCard('Soma Total (Orçado + Aguardando)', fmtHH(somaTotalOrcadoAguardando), 'HH Presupuestado (Aprovado) + Aguardando Aprovação Ternium', 'var(--navy)'),
     kpiCard('HH Orçada', fmtHH(t.hhOrcado), 'orçamento total aprovado', 'var(--navy)'),
+    kpiCard('HH Presupuestado Aguardando Aprovação Ternium', fmtHH(t.hhAguardando), 'ainda não aprovada — fora do orçamento atual', HH_AMBER),
+    // 2) consumo
     kpiCard('HH Consumida', fmtHH(t.hhConsumida), `${fmtDec(t.burnRate,1)}% do orçamento (burn rate)`, HH_NAVY),
-    kpiCard('HH Comprometida', fmtHH(t.hhComprometida), 'contratada, ainda não consumida', HH_AMBER),
-    kpiCard('HH em Aprovação', fmtHH(t.hhEmAprovacao), 'aguardando aprovação financeira', '#F0D060'),
-    kpiCard('Saldo Disponível', fmtHH(t.saldo), t.saldo>=0 ? 'ainda dentro do orçamento' : 'orçamento já excedido', t.saldo>=0 ? HH_GREEN : HH_RED),
-    kpiCard('Forecast Final', fmtHH(t.forecast), 'Consumida + Comprometida + Em Aprovação', t.forecast<=t.hhOrcado ? HH_GREEN : HH_RED),
-    kpiCard('Desvio', (t.desvioPct>=0?'+':'')+fmtDec(t.desvioPct,1)+'%', (t.desvio>=0?'+':'')+fmtMilhar(t.desvio,0)+' HH vs. orçado', t.desvioPct<=0 ? HH_GREEN : (t.desvioPct<=5 ? HH_AMBER : HH_RED)),
-    kpiCard('% Utilização', fmtDec(t.pctUtilizado,1)+'%', 'Consumida + Comprometida ÷ Orçamento Atual', t.pctUtilizado<80 ? HH_GREEN : (t.pctUtilizado<95 ? '#F0D060' : (t.pctUtilizado<=100 ? HH_AMBER : HH_RED))),
+    // 3) saldos (dois níveis: só o aprovado, e considerando o que está aguardando também)
+    kpiCard('HH Saldo', fmtHH(hhSaldo), 'saldo do total aprovado (Orçado − Consumida)', hhSaldo>=0 ? HH_GREEN : HH_RED),
+    kpiCard('Saldo Total Contrato', fmtHH(saldoTotalContrato), 'Soma Total (Orçado + Aguardando) − Consumida', saldoTotalContrato>=0 ? HH_GREEN : HH_RED),
+    // 4) alerta de extra escopo
+    kpiCard('OC Em Aprovación', fmtHH(t.ocEmAprovacao), '⚠ Extra Escopo — fora do orçamento original', HH_RED),
+    // 5) indicador percentual resumo
+    kpiCard('% HH Consumido', fmtDec(pctConsumidoTotal,1)+'%', 'Consumida ÷ Soma Total (Orçado + Aguardando)', pctConsumidoTotal<80 ? HH_GREEN : (pctConsumidoTotal<95 ? '#F0D060' : (pctConsumidoTotal<=100 ? HH_AMBER : HH_RED))),
   ].join('');
 }
 
-let hhGaugeChart=null, hhWaterfallChart=null, hhDonutChart=null, hhRankingChart=null, hhHeatmapChart=null;
+let hhWaterfallChart=null, hhDonutChart=null, hhRankingChart=null, hhHeatmapChart=null;
 function renderControleHHCharts(){
   if(typeof ApexCharts === 'undefined') return;
   const t = controleHHTotais();
   if(t.rows.length === 0) return;
-
-  // ---- Gauge: % utilização do orçamento ----
-  const elGauge = document.getElementById('chart-hh-gauge');
-  if(elGauge){
-    if(hhGaugeChart) hhGaugeChart.destroy();
-    const pct = Math.min(140, Math.round(t.pctUtilizado*10)/10);
-    const corGauge = t.pctUtilizado<80 ? HH_GREEN : (t.pctUtilizado<95 ? '#F0D060' : (t.pctUtilizado<=100 ? HH_AMBER : HH_RED));
-    hhGaugeChart = new ApexCharts(elGauge, {
-      chart:{type:'radialBar', height:260, fontFamily:'Inter, sans-serif'},
-      series:[Math.min(100, Math.round(t.pctUtilizado*10)/10)],
-      labels:['Utilizado'],
-      colors:[corGauge],
-      plotOptions:{radialBar:{hollow:{size:'60%'}, dataLabels:{
-        name:{fontSize:'12px', color:'#3E5468'},
-        value:{fontSize:'26px', fontWeight:700, color:'#0F1B2B', formatter:()=> fmtDec(t.pctUtilizado,1)+'%'},
-      }}},
-    });
-    hhGaugeChart.render();
-  }
 
   // ---- Waterfall (aproximado com barra flutuante): fluxo do orçamento ----
   const elWf = document.getElementById('chart-hh-waterfall');
@@ -6123,22 +6126,22 @@ function renderKpiCurvaS(){
     .sort((a,b)=> curvaSortKey(a) < curvaSortKey(b) ? -1 : (curvaSortKey(a) > curvaSortKey(b) ? 1 : 0));
   if(rows.length === 0){ el.innerHTML = ''; return; }
 
-  // corte mais recente com Real informado, respeitando o horário-referência
-  // escolhido pra data-base (sempre no nível mais fino, 06h/15h, independente
-  // da granularidade escolhida pro gráfico); se não houver nenhum, usa o
-  // último corte já ocorrido até a data-base
+  // Previsto: o corte mais próximo (<=) da Data-base/Corte selecionados no
+  // topo do painel — sempre acompanha a seleção, tenha ou não Real lançado
+  // ali. Real: o último corte com Real informado até essa mesma data-base
+  // (pode ser um corte anterior, se ainda não chegou lá).
+  let prevRow = null;
+  for(let i = rows.length - 1; i >= 0; i--){
+    if(curvaSortKey(rows[i]) <= nowKey){ prevRow = rows[i]; break; }
+  }
+  if(!prevRow) prevRow = rows[0];
   let last = null;
   for(let i = rows.length - 1; i >= 0; i--){
     if(rows[i].real_pct != null && curvaSortKey(rows[i]) <= nowKey){ last = rows[i]; break; }
   }
-  if(!last){
-    for(let i = rows.length - 1; i >= 0; i--){
-      if(curvaSortKey(rows[i]) <= nowKey){ last = rows[i]; break; }
-    }
-  }
-  if(!last) last = rows[rows.length - 1];
+  if(!last) last = prevRow;
 
-  const prevPct = last.prev_pct != null ? Number(last.prev_pct) : null;
+  const prevPct = prevRow.prev_pct != null ? Number(prevRow.prev_pct) : null;
   const realPct = last.real_pct != null ? Number(last.real_pct) : null;
   const delta = (prevPct != null && realPct != null) ? (realPct - prevPct) : null;
   const frenteLabel = {geral:'Geral', caldeira:'Caldeira', conversor:'Conversor'}[frente] || frente;
