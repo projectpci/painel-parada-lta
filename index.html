@@ -270,6 +270,25 @@ select:focus, .search-input:focus{border-color:var(--info-blue);}
 .hh-alert-item.warn{border-left-color:#E8B04B;}
 .hh-alert-item.attn{border-left-color:#F0D060;}
 .hh-status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;}
+.hh-cards-gear-panel{
+  display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:60;width:300px;
+  background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);max-height:360px;overflow-y:auto;
+}
+.hh-cards-gear-panel.open{display:block;}
+.hh-card-gear-row{
+  display:flex;align-items:center;gap:8px;padding:7px 6px;border-radius:6px;
+  background:var(--surface-2);margin-bottom:5px;cursor:grab;
+}
+.hh-card-gear-row.dragging{opacity:0.4;}
+.hh-card-gear-handle{color:var(--text-dim);font-size:14px;}
+.hh-card-gear-label{flex:1;font-size:12px;color:var(--text-hi);}
+[contenteditable="true"].kpi-label, [contenteditable="true"].kpi-sub{
+  outline:1px dashed var(--border);border-radius:3px;cursor:text;
+}
+[contenteditable="true"].kpi-label:focus, [contenteditable="true"].kpi-sub:focus{
+  outline:1px solid var(--info-blue);background:rgba(46,123,196,0.06);
+}
 @media (max-width: 900px){ .grid-2col{grid-template-columns:1fr;} }
 .kpi-card{
   background:var(--surface);border:1px solid var(--border);border-radius:10px;
@@ -1653,6 +1672,13 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
       </div>
     </div>
 
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;position:relative;">
+      <button class="expand-btn" id="hh-cards-gear-btn" data-role-only="admin" title="Configurar cards: mostrar/ocultar e reordenar">⚙ Configurar Cards</button>
+      <div class="hh-cards-gear-panel" id="hh-cards-gear-panel">
+        <div class="filter-rail-label" style="margin-bottom:8px;">Arraste para reordenar · desligue para ocultar</div>
+        <div id="hh-cards-gear-list"></div>
+      </div>
+    </div>
     <div class="kpi-row" id="kpi-row-controlehh"></div>
 
     <div class="grid-2col">
@@ -5249,18 +5275,21 @@ function buildCurvaCompactHTML(frente){
 
   const first = rows[0], lastRow = rows[rows.length - 1];
   const nowKey = state.today + 'T' + (state.curvaCorteHora || '15:00');
+  // Previsto: corte mais próximo (<=) da Data-base/Corte selecionados — sempre
+  // acompanha a seleção, tenha ou não Real lançado ali (mesma correção do
+  // card principal). Real: último corte com Real informado até essa data-base.
+  let prevRow = null;
+  for(let i = rows.length - 1; i >= 0; i--){
+    if(curvaSortKey(rows[i]) <= nowKey){ prevRow = rows[i]; break; }
+  }
+  if(!prevRow) prevRow = rows[0];
   let last = null;
   for(let i = rows.length - 1; i >= 0; i--){
     if(rows[i].real_pct != null && curvaSortKey(rows[i]) <= nowKey){ last = rows[i]; break; }
   }
-  if(!last){
-    for(let i = rows.length - 1; i >= 0; i--){
-      if(curvaSortKey(rows[i]) <= nowKey){ last = rows[i]; break; }
-    }
-  }
-  if(!last) last = lastRow;
+  if(!last) last = prevRow;
 
-  const prevPct = last.prev_pct != null ? Number(last.prev_pct) : 0;
+  const prevPct = prevRow.prev_pct != null ? Number(prevRow.prev_pct) : 0;
   const realPct = last.real_pct != null ? Number(last.real_pct) : null;
   const dec = (state.chartLabelStyle.curve && state.chartLabelStyle.curve.decimals != null) ? state.chartLabelStyle.curve.decimals : 1;
   const delta = realPct != null ? (realPct - prevPct) : null;
@@ -5815,6 +5844,31 @@ function controleHHTotais(){
   return { rows, hhOrcado, hhConsumida, hhComprometida, hhEmAprovacao, hhAguardando, presupuestoAtual, saldo, forecast, desvio, desvioPct, pctUtilizado, burnRate, indiceAprovacao, ocAprovadas, ocEmAprovacao };
 }
 
+// ---------------- Cards do Controle de HH — configuráveis (título/contexto
+// editáveis pelo admin, ordem por arrastar, ocultar/exibir) ----------------
+const HH_CARD_ORDER_DEFAULT = ['soma_total','hh_orcada','hh_aguardando','hh_consumida','hh_saldo','saldo_total_contrato','oc_em_aprovacao','pct_consumido'];
+function hhCardDefs(t){
+  const fmtHH = (v)=> fmtMilhar(v,0)+' HH';
+  const somaTotalOrcadoAguardando = t.hhOrcado + t.hhAguardando;
+  const hhSaldo = t.hhOrcado - t.hhConsumida;
+  const saldoTotalContrato = somaTotalOrcadoAguardando - t.hhConsumida;
+  const pctConsumidoTotal = somaTotalOrcadoAguardando > 0 ? (t.hhConsumida / somaTotalOrcadoAguardando) * 100 : 0;
+  const pctConsumidoOrcado = t.hhOrcado > 0 ? (t.hhConsumida / t.hhOrcado) * 100 : 0; // = burnRate
+  return {
+    soma_total: {label:'Soma Total (Orçado + Aguardando)', value:fmtHH(somaTotalOrcadoAguardando), sub:'HH Presupuestado (Aprovado) + Aguardando Aprovação Ternium', color:'var(--navy)'},
+    hh_orcada: {label:'HH Orçada', value:fmtHH(t.hhOrcado), sub:'orçamento total aprovado', color:'var(--navy)'},
+    hh_aguardando: {label:'HH Presupuestado Aguardando Aprovação Ternium', value:fmtHH(t.hhAguardando), sub:'ainda não aprovada — fora do orçamento atual', color:HH_AMBER},
+    hh_consumida: {label:'HH Consumida', value:fmtHH(t.hhConsumida), sub:`${fmtDec(pctConsumidoOrcado,1)}% do orçamento aprovado · ${fmtDec(pctConsumidoTotal,1)}% do orçamento total`, color:HH_NAVY},
+    hh_saldo: {label:'HH Saldo', value:fmtHH(hhSaldo), sub:'saldo do total aprovado (Orçado − Consumida)', color:hhSaldo>=0 ? HH_GREEN : HH_RED},
+    saldo_total_contrato: {label:'Saldo Total Contrato', value:fmtHH(saldoTotalContrato), sub:'Soma Total (Orçado + Aguardando) − Consumida', color:saldoTotalContrato>=0 ? HH_GREEN : HH_RED},
+    oc_em_aprovacao: {label:'OC Em Aprovación', value:fmtHH(t.ocEmAprovacao), sub:'⚠ Extra Escopo — fora do orçamento original', color:HH_RED},
+    pct_consumido: {label:'% HH Consumido', value:fmtDec(pctConsumidoTotal,1)+'%', sub:'Consumida ÷ Soma Total (Orçado + Aguardando)', color:pctConsumidoTotal<80 ? HH_GREEN : (pctConsumidoTotal<95 ? '#F0D060' : (pctConsumidoTotal<=100 ? HH_AMBER : HH_RED))},
+  };
+}
+state.hhCardsOrder = [...HH_CARD_ORDER_DEFAULT];
+state.hhCardsHidden = new Set();
+state.hhCardsCustom = {}; // {id: {label?, sub?}} — sobrescreve o texto padrão
+
 function renderControleHHKpis(){
   const el = document.getElementById('kpi-row-controlehh');
   if(!el) return;
@@ -5823,26 +5877,96 @@ function renderControleHHKpis(){
     el.innerHTML = kpiCard('Controle de HH', '—', 'sem dados importados ainda', 'var(--text-lo)');
     return;
   }
-  const fmtHH = (v)=> fmtMilhar(v,0)+' HH';
-  const somaTotalOrcadoAguardando = t.hhOrcado + t.hhAguardando;
-  const hhSaldo = t.hhOrcado - t.hhConsumida; // saldo do total JÁ aprovado
-  const saldoTotalContrato = somaTotalOrcadoAguardando - t.hhConsumida; // saldo considerando também o que ainda está aguardando aprovação
-  const pctConsumidoTotal = somaTotalOrcadoAguardando > 0 ? (t.hhConsumida / somaTotalOrcadoAguardando) * 100 : 0;
-  el.innerHTML = [
-    // 1) visão geral do orçamento total (aprovado + em análise)
-    kpiCard('Soma Total (Orçado + Aguardando)', fmtHH(somaTotalOrcadoAguardando), 'HH Presupuestado (Aprovado) + Aguardando Aprovação Ternium', 'var(--navy)'),
-    kpiCard('HH Orçada', fmtHH(t.hhOrcado), 'orçamento total aprovado', 'var(--navy)'),
-    kpiCard('HH Presupuestado Aguardando Aprovação Ternium', fmtHH(t.hhAguardando), 'ainda não aprovada — fora do orçamento atual', HH_AMBER),
-    // 2) consumo
-    kpiCard('HH Consumida', fmtHH(t.hhConsumida), `${fmtDec(t.burnRate,1)}% do orçamento (burn rate)`, HH_NAVY),
-    // 3) saldos (dois níveis: só o aprovado, e considerando o que está aguardando também)
-    kpiCard('HH Saldo', fmtHH(hhSaldo), 'saldo do total aprovado (Orçado − Consumida)', hhSaldo>=0 ? HH_GREEN : HH_RED),
-    kpiCard('Saldo Total Contrato', fmtHH(saldoTotalContrato), 'Soma Total (Orçado + Aguardando) − Consumida', saldoTotalContrato>=0 ? HH_GREEN : HH_RED),
-    // 4) alerta de extra escopo
-    kpiCard('OC Em Aprovación', fmtHH(t.ocEmAprovacao), '⚠ Extra Escopo — fora do orçamento original', HH_RED),
-    // 5) indicador percentual resumo
-    kpiCard('% HH Consumido', fmtDec(pctConsumidoTotal,1)+'%', 'Consumida ÷ Soma Total (Orçado + Aguardando)', pctConsumidoTotal<80 ? HH_GREEN : (pctConsumidoTotal<95 ? '#F0D060' : (pctConsumidoTotal<=100 ? HH_AMBER : HH_RED))),
-  ].join('');
+  const defs = hhCardDefs(t);
+  const isAdmin = state.role === 'admin';
+  const html = state.hhCardsOrder
+    .filter(id => defs[id] && !state.hhCardsHidden.has(id))
+    .map(id=>{
+      const d = defs[id];
+      const custom = state.hhCardsCustom[id] || {};
+      const label = custom.label != null ? custom.label : d.label;
+      const sub = custom.sub != null ? custom.sub : d.sub;
+      const editAttrs = isAdmin ? `contenteditable="true" spellcheck="false" data-hh-card-id="${id}"` : '';
+      return `<div class="kpi-card" style="--kpi-accent:${d.color}">
+        <div class="kpi-label"${editAttrs ? ` ${editAttrs} data-hh-field="label"` : ''}>${label}</div>
+        <div class="kpi-value">${d.value}</div>
+        <div class="kpi-sub"${editAttrs ? ` ${editAttrs} data-hh-field="sub"` : ''}>${sub}</div>
+      </div>`;
+    }).join('');
+  el.innerHTML = html;
+  if(isAdmin) wireHHCardInlineEdit();
+}
+function wireHHCardInlineEdit(){
+  document.querySelectorAll('#kpi-row-controlehh [data-hh-card-id]').forEach(elField=>{
+    elField.addEventListener('blur', ()=>{
+      const id = elField.dataset.hhCardId, field = elField.dataset.hhField;
+      if(!state.hhCardsCustom[id]) state.hhCardsCustom[id] = {};
+      state.hhCardsCustom[id][field] = elField.textContent.trim();
+      saveConfig('hh_cards_custom', state.hhCardsCustom);
+    });
+  });
+}
+
+// ---- engrenagem dos cards: ocultar/exibir e arrastar pra reordenar ----
+function renderHHCardsGearPanel(){
+  const wrap = document.getElementById('hh-cards-gear-list');
+  if(!wrap) return;
+  const defs = hhCardDefs(controleHHTotais());
+  wrap.innerHTML = state.hhCardsOrder.filter(id=>defs[id]).map(id=>{
+    const custom = state.hhCardsCustom[id] || {};
+    const label = custom.label != null ? custom.label : defs[id].label;
+    const hidden = state.hhCardsHidden.has(id);
+    return `<div class="hh-card-gear-row" draggable="true" data-id="${id}">
+      <span class="hh-card-gear-handle">⠿</span>
+      <span class="hh-card-gear-label">${label}</span>
+      <label class="pt-switch"><input type="checkbox" class="hh-card-gear-toggle" data-id="${id}" ${hidden?'':'checked'}><span class="pt-slider"></span></label>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.hh-card-gear-toggle').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const id = inp.dataset.id;
+      if(inp.checked) state.hhCardsHidden.delete(id); else state.hhCardsHidden.add(id);
+      saveConfig('hh_cards_hidden', Array.from(state.hhCardsHidden));
+      renderControleHHKpis();
+    });
+  });
+
+  let draggingId = null;
+  wrap.querySelectorAll('.hh-card-gear-row').forEach(row=>{
+    row.addEventListener('dragstart', ()=>{ draggingId = row.dataset.id; row.classList.add('dragging'); });
+    row.addEventListener('dragend', ()=>{ row.classList.remove('dragging'); });
+    row.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      const after = row; // solta antes do item sob o mouse
+      if(!draggingId || draggingId === after.dataset.id) return;
+      const fromIdx = state.hhCardsOrder.indexOf(draggingId);
+      const toIdx = state.hhCardsOrder.indexOf(after.dataset.id);
+      if(fromIdx < 0 || toIdx < 0) return;
+      state.hhCardsOrder.splice(fromIdx, 1);
+      state.hhCardsOrder.splice(toIdx, 0, draggingId);
+      renderHHCardsGearPanel();
+      renderControleHHKpis();
+      saveConfig('hh_cards_order', state.hhCardsOrder);
+    });
+  });
+}
+document.getElementById('hh-cards-gear-btn')?.addEventListener('click', ()=>{
+  document.getElementById('hh-cards-gear-panel')?.classList.toggle('open');
+  renderHHCardsGearPanel();
+});
+document.addEventListener('click', (e)=>{
+  const panel = document.getElementById('hh-cards-gear-panel');
+  const btn = document.getElementById('hh-cards-gear-btn');
+  if(panel && panel.classList.contains('open') && !panel.contains(e.target) && e.target !== btn) panel.classList.remove('open');
+});
+async function fetchHHCardsConfig(){
+  const order = await fetchConfig('hh_cards_order');
+  if(Array.isArray(order) && order.length) state.hhCardsOrder = [...order, ...HH_CARD_ORDER_DEFAULT.filter(id=>!order.includes(id))];
+  const hidden = await fetchConfig('hh_cards_hidden');
+  if(Array.isArray(hidden)) state.hhCardsHidden = new Set(hidden);
+  const custom = await fetchConfig('hh_cards_custom');
+  if(custom && typeof custom === 'object') state.hhCardsCustom = custom;
 }
 
 let hhWaterfallChart=null, hhDonutChart=null, hhRankingChart=null, hhHeatmapChart=null;
@@ -9437,6 +9561,7 @@ async function bootstrap(){
   fetchEfetivoTurnoFromSupabase(); // idem, para o Efetivo x Turno
   fetchEfetivoFolgaFromSupabase(); // idem, para a Folga de Campo
   fetchControleHHFromSupabase(); // idem, para o Controle de HH
+  fetchHHCardsConfig().then(()=>{ if(document.getElementById('view-controlehh')?.classList.contains('active')) renderControleHHKpis(); });
   wirePlanoToggle();
   renderCriticalAlert();
   renderExecSummary();
