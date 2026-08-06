@@ -263,6 +263,13 @@ select:focus, .search-input:focus{border-color:var(--info-blue);}
 /* ---------- KPI cards ---------- */
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
 .grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:20px;}
+@media(max-width:960px){ .grid-3col{grid-template-columns:1fr;} }
+.hh-alert-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;border-left:4px solid var(--border);background:var(--surface-2);font-size:13px;}
+.hh-alert-item.crit{border-left-color:var(--red);}
+.hh-alert-item.warn{border-left-color:#E8B04B;}
+.hh-alert-item.attn{border-left-color:#F0D060;}
+.hh-status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;}
 @media (max-width: 900px){ .grid-2col{grid-template-columns:1fr;} }
 .kpi-card{
   background:var(--surface);border:1px solid var(--border);border-radius:10px;
@@ -1216,6 +1223,7 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
     <button class="tab-btn" data-view="ganho">Ganho de Horas</button>
     <button class="tab-btn" data-view="hist">Histograma</button>
     <button class="tab-btn" data-view="efetivoturno">Efetivo x Turno</button>
+    <button class="tab-btn" data-view="controlehh">Controle de HH</button>
   </div>
   <div class="updated">
     <div class="updated-group">
@@ -1628,6 +1636,83 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
         </table>
         <p class="panel-note" style="margin:8px 0 0;">Negativo = déficit (faltou gente); positivo = superávit (sobrou gente em relação ao planejado).</p>
       </div>
+    </div>
+
+  </div>
+
+  <!-- ============ VIEW: CONTROLE DE HH ============ -->
+  <div class="view" id="view-controlehh">
+
+    <div class="filter-rail-fixed" id="controlehh-filter-fixed">
+      <div class="filter-rail-title">🔎 Filtros</div>
+      <div class="filter-rail-group">
+        <div class="filter-rail-label">Área</div>
+        <div class="granularity-toggle" id="controlehh-area-toggle">
+          <button class="gran-btn active" data-area="geral">Geral</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="kpi-row-controlehh"></div>
+
+    <div class="grid-3col">
+      <div class="panel scroll-reveal">
+        <div class="panel-head"><div class="panel-title">Utilização do Orçamento</div></div>
+        <div id="chart-hh-gauge" style="margin-top:6px;"></div>
+      </div>
+      <div class="panel scroll-reveal">
+        <div class="panel-head"><div class="panel-title">Fluxo do Orçamento (HH)</div></div>
+        <div id="chart-hh-waterfall" style="margin-top:6px;"></div>
+      </div>
+      <div class="panel scroll-reveal">
+        <div class="panel-head"><div class="panel-title">Participação por Área</div></div>
+        <div id="chart-hh-donut" style="margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <div class="grid-2col">
+      <div class="panel scroll-reveal">
+        <div class="panel-head"><div class="panel-title">Ranking por Especialidade — HH Orçado</div></div>
+        <div id="chart-hh-ranking" style="margin-top:10px;"></div>
+      </div>
+      <div class="panel scroll-reveal">
+        <div class="panel-head"><div class="panel-title">Heatmap — % Utilizado (Área x Especialidade)</div></div>
+        <div id="chart-hh-heatmap" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div class="panel scroll-reveal">
+      <div class="panel-head"><div class="panel-title">🚨 Painel de Alertas</div></div>
+      <div id="hh-alerts-list" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <div class="panel scroll-reveal">
+      <div class="panel-head">
+        <div class="panel-title">Matriz Inteligente — Área / Especialidade</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" id="hh-table-search" placeholder="Pesquisar área, atividade, especialidade..." class="database-input" style="color:var(--text-hi);background:var(--surface-2);width:240px;">
+          <button class="expand-btn" id="hh-export-btn">⭳ Exportar Excel</button>
+        </div>
+      </div>
+      <div class="table-scroll" style="margin-top:10px;max-height:480px;overflow-y:auto;">
+        <table class="items" id="hh-table">
+          <thead>
+            <tr>
+              <th data-sort="area" style="cursor:pointer;">Área ↕</th>
+              <th data-sort="atividade" style="cursor:pointer;">Atividade ↕</th>
+              <th data-sort="especialidade" style="cursor:pointer;">Especialidade ↕</th>
+              <th data-sort="hh_orcado" style="cursor:pointer;">HH Orçada ↕</th>
+              <th data-sort="hh_consumida" style="cursor:pointer;">Consumida ↕</th>
+              <th data-sort="hh_comprometida" style="cursor:pointer;">Comprometida ↕</th>
+              <th data-sort="saldo" style="cursor:pointer;">Saldo ↕</th>
+              <th data-sort="pctUtilizado" style="cursor:pointer;">% Utilizado ↕</th>
+              <th data-sort="status" style="cursor:pointer;">Status ↕</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="panel-note" style="margin:8px 0 0;" id="hh-table-count"></p>
     </div>
 
   </div>
@@ -2296,19 +2381,11 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 
         <div class="settings-cat active" data-settingscat="dados">
           <div class="settings-section" style="padding-top:0;">
-            <div class="settings-section-title">📈 Cronograma — Curva S + Efetivo x Turno</div>
-            <p class="panel-note" style="margin:0 0 10px;">É a mesma planilha do cronograma (4 abas) — um único upload lê a aba <b>"Cruva Geral"</b> (Curva S) e a aba <b>"Efetivo x Turno"</b> ao mesmo tempo, e atualiza os dois painéis juntos. Um upload novo substitui os dois inteiros.</p>
-            <button class="file-btn" id="curva-upload-btn">⇪ Carregar planilha do cronograma (.xlsx)</button>
+            <div class="settings-section-title">📁 Planilha Geral do Projeto</div>
+            <p class="panel-note" style="margin:0 0 10px;">Arquivo único, com todas as abas do projeto — <b>Cruva Geral</b> (Curva S), <b>Efetivo x Turno</b> (efetivo + folga de campo), <b>Variação de Datas</b> (Ganho de Horas) e <b>Contrele de HH</b> (Controle de HH). Um único upload lê o arquivo inteiro e atualiza os 5 painéis de uma vez — cada aba que existir no arquivo é reconhecida e atualizada; se alguma aba não existir nessa versão específica, o painel correspondente simplesmente continua com o que já tinha.</p>
+            <button class="file-btn" id="curva-upload-btn">⇪ Carregar planilha geral (.xlsx)</button>
             <input type="file" id="curva-file-input" accept=".xlsx,.xls" style="display:none;">
             <div id="curva-upload-status" class="panel-note" style="margin:8px 0 0;"></div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title">⏱ Ganho de Horas — Variação de Horas</div>
-            <p class="panel-note" style="margin:0 0 10px;">Planilha "Variação de Datas" (Término Prev. / Datas de Corte / Atual Corte). Um upload novo substitui o Ganho de Horas inteiro pela versão mais recente.</p>
-            <button class="file-btn" id="ganho-upload-btn" title="Carregar a planilha padrão de Variação de Horas (.xlsx)">⇪ Carregar planilha de Variação de Horas (.xlsx)</button>
-            <input type="file" id="ganho-file-input" accept=".xlsx,.xls" style="display:none;">
-            <div id="ganho-upload-status" class="panel-note" style="margin:8px 0 0;"></div>
           </div>
 
           <div class="settings-section">
@@ -3181,6 +3258,7 @@ let HISTOGRAM_ITEMS = [];            // mão de obra por disciplina/data — vem
 let CURVA_ITEMS = [];                // avanço físico (% Prev x % Real acumulado) por data/frente — tabela `curva_avanco`
 let GANHO_ITEMS = [];                 // ganho/perda de horas no caminho crítico por corte — tabela `ganho_horas`
 let EFETIVO_TURNO_ITEMS = [];          // efetivo por turno/dia (Prev x Real) — tabela `efetivo_turno`
+let EFETIVO_FOLGA_ITEMS = [];          // folga de campo por dia (série única) — tabela `efetivo_folga`
 let dataLabel = 'carregando do banco de dados…';
 let dbConnected = false;
 
@@ -3207,7 +3285,7 @@ const state = {
   curvaCorteHora: '15:00', // corte do dia (06:00 | 15:00) usado como "agora" na Curva S
   weekDiscFilter: 'all',
   visiblePanels: new Set(['disc','week','summary','spi','aging','milestones','heatmap']),
-  visibleTabs: new Set(['exec','dash','curva','ganho','hist','efetivoturno']),
+  visibleTabs: new Set(['exec','dash','curva','ganho','hist','efetivoturno','controlehh']),
   agingMode: 'vencidas',
   visibleColumns: new Set(ALL_COLUMN_KEYS),
   editingKey: null,
@@ -3577,7 +3655,7 @@ document.getElementById('bulk-apply-btn').addEventListener('click', async ()=>{
   }
 });
 
-const ALL_TAB_KEYS = ['exec','dash','curva','ganho','hist','efetivoturno'];
+const ALL_TAB_KEYS = ['exec','dash','curva','ganho','hist','efetivoturno','controlehh'];
 const TAB_DEFS = [
   {key:'exec', label:'Resumo Executivo'},
   {key:'dash', label:'Dashboard'},
@@ -3585,6 +3663,7 @@ const TAB_DEFS = [
   {key:'ganho', label:'Ganho de Horas'},
   {key:'hist', label:'Histograma'},
   {key:'efetivoturno', label:'Efetivo x Turno'},
+  {key:'controlehh', label:'Controle de HH'},
 ];
 function buildTabVisibilityControl(){
   const wrap = document.getElementById('tabs-visibility-group');
@@ -4220,8 +4299,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
     document.getElementById('view-' + btn.dataset.view).classList.add('active');
-    document.body.classList.toggle('has-fixed-filter-rail', btn.dataset.view === 'curva' || btn.dataset.view === 'ganho');
-    const hideFilterUI = btn.dataset.view === 'docs' || btn.dataset.view === 'hist' || btn.dataset.view === 'exec' || btn.dataset.view === 'curva' || btn.dataset.view === 'ganho' || btn.dataset.view === 'efetivoturno';
+    document.body.classList.toggle('has-fixed-filter-rail', btn.dataset.view === 'curva' || btn.dataset.view === 'ganho' || btn.dataset.view === 'controlehh');
+    const hideFilterUI = btn.dataset.view === 'docs' || btn.dataset.view === 'hist' || btn.dataset.view === 'exec' || btn.dataset.view === 'curva' || btn.dataset.view === 'ganho' || btn.dataset.view === 'efetivoturno' || btn.dataset.view === 'controlehh';
     document.getElementById('filterbar').style.display = hideFilterUI ? 'none' : '';
     const alertBanner = document.getElementById('critical-alert-banner');
     if(alertBanner && alertBanner.dataset.hasContent === '1') alertBanner.style.display = hideFilterUI ? 'none' : 'flex';
@@ -4230,6 +4309,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(btn.dataset.view === 'ganho') renderGanho();
     if(btn.dataset.view === 'exec') renderExecSummary();
     if(btn.dataset.view === 'efetivoturno') renderEfetivoTurno();
+    if(btn.dataset.view === 'controlehh') renderControleHH();
   });
 });
 
@@ -4266,6 +4346,13 @@ function debounce(fn, ms){
 function fmtDec(value, decimals){
   if(value == null || isNaN(value)) return '—';
   return value.toFixed(decimals).replace('.', ',');
+}
+// mesma coisa que fmtDec, mas com separador de milhar (1.234,5) — usado onde
+// os números costumam passar de 4 dígitos (Controle de HH). Intl.NumberFormat
+// já cuida do sinal negativo corretamente (ex: -6.361), sem precisar tratar à mão.
+function fmtMilhar(value, decimals){
+  if(value == null || isNaN(value)) return '—';
+  return new Intl.NumberFormat('pt-BR', {minimumFractionDigits: decimals, maximumFractionDigits: decimals}).format(value);
 }
 
 function kpiCard(label, value, sub, color, id){
@@ -5491,12 +5578,17 @@ function renderEfetivoTurnoKpis(){
   const melhor = ranking[0];
   const pior = ranking[ranking.length-1];
   const gapTotal = ranking.reduce((acc,r)=> acc + (r.gapMedio!=null ? r.gapMedio*r.nReal : 0), 0);
+  const folgaVals = EFETIVO_FOLGA_ITEMS.map(f=>Number(f.folga)||0);
+  const folgaMedia = folgaVals.length ? folgaVals.reduce((a,b)=>a+b,0)/folgaVals.length : null;
+  const folgaTotal = folgaVals.length ? folgaVals.reduce((a,b)=>a+b,0) : null;
   el.innerHTML = [
     kpiCard('Aderência Geral', aderenciaGeralPct!=null ? fmtDec(aderenciaGeralPct,1)+'%' : '—', 'Real ÷ Previsto acumulado', aderenciaGeralPct>=95 ? 'var(--green)' : (aderenciaGeralPct>=85 ? 'var(--navy)' : 'var(--red)')),
     kpiCard('Gap de Efetivo', (gapTotal>=0?'+':'')+fmtDec(gapTotal,0)+' pessoas', gapTotal>=0 ? 'superávit acumulado (Real acima do Previsto)' : 'déficit acumulado (Real abaixo do Previsto)', gapTotal>=0 ? 'var(--green)' : 'var(--red)'),
     kpiCard('Melhor Turno', melhor.turno, melhor.aderencia!=null ? `${fmtDec(melhor.aderencia,1)}% de aderência` : '—', 'var(--green)'),
     kpiCard('Pior Turno', pior.turno, pior.aderencia!=null ? `${fmtDec(pior.aderencia,1)}% de aderência` : '—', 'var(--red)'),
     kpiCard('Dias com Real', String(diasComReal.size), 'medições lançadas no período', 'var(--text-lo)'),
+    kpiCard('Folga Média/dia', folgaMedia!=null ? fmtDec(folgaMedia,0)+' pessoas' : '—', 'rotatividade programada no canteiro', '#B98CE0'),
+    kpiCard('Folga Acumulada', folgaTotal!=null ? fmtDec(folgaTotal,0)+' pessoas' : '—', 'soma no período com dado lançado', '#B98CE0'),
   ].join('');
 }
 
@@ -5513,7 +5605,12 @@ function renderEfetivoTurnoCharts(){
   // após dia esconde exatamente o que mais importa aqui: se APONTOU falta de
   // gente NUM DIA específico, porque o déficit "some" dentro do total que só
   // cresce. Por isso o gráfico mostra o valor diário puro, não acumulado.
-  const seriePrev = [], serieReal = [];
+  //
+  // Folga de Campo entra como barra no MESMO eixo (mesma unidade — pessoas):
+  // ajuda a explicar visualmente quedas no Real que não são "falta de gente
+  // contratada", e sim rotatividade planejada (folga programada).
+  const folgaPorData = new Map(EFETIVO_FOLGA_ITEMS.map(f=>[f.data, Number(f.folga)||0]));
+  const seriePrev = [], serieReal = [], serieFolga = [];
   datasUnicas.forEach(data=>{
     const doDia = rows.filter(r=>r.data===data);
     const prevDia = doDia.reduce((s,r)=> s + (r.prev!=null?Number(r.prev):0), 0);
@@ -5523,20 +5620,26 @@ function renderEfetivoTurnoCharts(){
       const realDia = doDia.reduce((s,r)=> s + (r.real!=null?Number(r.real):0), 0);
       serieReal.push([data, Math.round(realDia)]);
     }
+    if(folgaPorData.has(data)) serieFolga.push([data, folgaPorData.get(data)]);
   });
   const elHist = document.getElementById('chart-efetivo-historico');
   if(elHist){
     if(efetivoHistoricoChart) efetivoHistoricoChart.destroy();
     efetivoHistoricoChart = new ApexCharts(elHist, {
-      chart:{type:'area', height:320, toolbar:{show:true}, fontFamily:'Inter, sans-serif'},
-      series:[{name:'Previsto (diário)', data:seriePrev},{name:'Real (diário)', data:serieReal}],
+      chart:{type:'line', height:320, toolbar:{show:true}, fontFamily:'Inter, sans-serif'},
+      series:[
+        {name:'Previsto (diário)', type:'area', data:seriePrev},
+        {name:'Real (diário)', type:'area', data:serieReal},
+        {name:'Folga de Campo', type:'column', data:serieFolga},
+      ],
       xaxis:{type:'datetime', labels:{format:'dd/MM'}},
-      yaxis:{title:{text:'Efetivo no dia (pessoas)'}},
-      colors:['#002B5C','#6FA834'],
-      stroke:{curve:'smooth', width:2},
-      fill:{type:'gradient', gradient:{opacityFrom:0.35, opacityTo:0.05}},
+      yaxis:{title:{text:'Pessoas no dia'}},
+      colors:['#002B5C','#6FA834','#B98CE0'],
+      stroke:{curve:'smooth', width:[2,2,0]},
+      fill:{type:['gradient','gradient','solid'], gradient:{opacityFrom:0.35, opacityTo:0.05}, opacity:[1,1,0.7]},
+      plotOptions:{bar:{columnWidth:'55%'}},
       dataLabels:{enabled:false},
-      tooltip:{x:{format:'dd/MM/yyyy'}},
+      tooltip:{x:{format:'dd/MM/yyyy'}, shared:true},
       legend:{position:'top'},
     });
     efetivoHistoricoChart.render();
@@ -5637,6 +5740,366 @@ async function fetchEfetivoTurnoFromSupabase(){
     EFETIVO_TURNO_ITEMS = [];
   }
   if(document.getElementById('view-efetivoturno')?.classList.contains('active')) renderEfetivoTurno();
+}
+
+async function fetchEfetivoFolgaFromSupabase(){
+  try{
+    const {data, error} = await sb.from('efetivo_folga').select('*').order('data', {ascending:true});
+    if(error) throw error;
+    EFETIVO_FOLGA_ITEMS = (data || []).map(r=>({ data: r.data, folga: Number(r.folga)||0 }));
+  } catch(err){
+    console.warn('Tabela efetivo_folga indisponível:', err);
+    EFETIVO_FOLGA_ITEMS = [];
+  }
+  if(document.getElementById('view-efetivoturno')?.classList.contains('active')) renderEfetivoTurno();
+}
+
+// ===================================================================
+// CONTROLE DE HH — orçamento, consumo, comprometimento, forecast
+// ===================================================================
+let CONTROLE_HH_ITEMS = [];
+const HH_NAVY = '#002B5C', HH_GREEN = '#6FA834', HH_RED = '#E5484D', HH_AMBER = '#E8B04B';
+let hhTableSort = {key:'pctUtilizado', dir:-1}; // padrão: mais crítico primeiro
+let hhTableSearch = '';
+let hhAreaFiltro = 'geral'; // 'geral' = todas as áreas | ou o nome exato de uma área
+
+function controleHHRowCalc(r){
+  const saldo = r.hh_orcado - r.hh_consumida - r.hh_comprometida;
+  const forecast = r.hh_consumida + r.hh_comprometida + r.hh_em_aprovacao;
+  const desvio = forecast - r.hh_orcado;
+  const desvioPct = r.hh_orcado > 0 ? (desvio / r.hh_orcado) * 100 : 0;
+  const base = r.presupuesto_atual > 0 ? r.presupuesto_atual : r.hh_orcado;
+  const pctUtilizado = base > 0 ? ((r.hh_consumida + r.hh_comprometida) / base) * 100 : 0;
+  let status = 'Normal', statusColor = HH_GREEN;
+  if(pctUtilizado > 100){ status = 'Crítico'; statusColor = HH_RED; }
+  else if(pctUtilizado >= 95){ status = 'Elevado'; statusColor = HH_AMBER; }
+  else if(pctUtilizado >= 80){ status = 'Atenção'; statusColor = '#F0D060'; }
+  return {...r, saldo, forecast, desvio, desvioPct, pctUtilizado, status, statusColor};
+}
+function controleHHCalculated(){
+  const base = hhAreaFiltro === 'geral' ? CONTROLE_HH_ITEMS : CONTROLE_HH_ITEMS.filter(r => r.area === hhAreaFiltro);
+  return base.map(controleHHRowCalc);
+}
+function controleHHTotais(){
+  const rows = controleHHCalculated();
+  const soma = (campo) => rows.reduce((s,r)=> s + (Number(r[campo])||0), 0);
+  const hhOrcado = soma('hh_orcado');
+  const hhConsumida = soma('hh_consumida');
+  const hhComprometida = soma('hh_comprometida');
+  const hhEmAprovacao = soma('hh_em_aprovacao');
+  const hhAguardando = soma('hh_aguardando_aprovacao');
+  const presupuestoAtual = soma('presupuesto_atual');
+  const saldo = hhOrcado - hhConsumida - hhComprometida;
+  const forecast = hhConsumida + hhComprometida + hhEmAprovacao;
+  const desvio = forecast - hhOrcado;
+  const desvioPct = hhOrcado > 0 ? (desvio / hhOrcado) * 100 : 0;
+  const base = presupuestoAtual > 0 ? presupuestoAtual : hhOrcado;
+  const pctUtilizado = base > 0 ? ((hhConsumida + hhComprometida) / base) * 100 : 0;
+  const burnRate = hhOrcado > 0 ? (hhConsumida / hhOrcado) * 100 : 0;
+  const ocAprovadas = soma('oc_aprovadas');
+  const ocEmAprovacao = soma('oc_em_aprovacao');
+  const indiceAprovacao = (ocAprovadas + ocEmAprovacao) > 0 ? (ocAprovadas / (ocAprovadas + ocEmAprovacao)) * 100 : null;
+  return { rows, hhOrcado, hhConsumida, hhComprometida, hhEmAprovacao, hhAguardando, presupuestoAtual, saldo, forecast, desvio, desvioPct, pctUtilizado, burnRate, indiceAprovacao };
+}
+
+function renderControleHHKpis(){
+  const el = document.getElementById('kpi-row-controlehh');
+  if(!el) return;
+  const t = controleHHTotais();
+  if(t.rows.length === 0){
+    el.innerHTML = kpiCard('Controle de HH', '—', 'sem dados importados ainda', 'var(--text-lo)');
+    return;
+  }
+  const fmtHH = (v)=> fmtMilhar(v,0)+' HH';
+  el.innerHTML = [
+    kpiCard('HH Orçada', fmtHH(t.hhOrcado), 'orçamento total aprovado', 'var(--navy)'),
+    kpiCard('HH Consumida', fmtHH(t.hhConsumida), `${fmtDec(t.burnRate,1)}% do orçamento (burn rate)`, HH_NAVY),
+    kpiCard('HH Comprometida', fmtHH(t.hhComprometida), 'contratada, ainda não consumida', HH_AMBER),
+    kpiCard('HH em Aprovação', fmtHH(t.hhEmAprovacao), 'aguardando aprovação financeira', '#F0D060'),
+    kpiCard('Saldo Disponível', fmtHH(t.saldo), t.saldo>=0 ? 'ainda dentro do orçamento' : 'orçamento já excedido', t.saldo>=0 ? HH_GREEN : HH_RED),
+    kpiCard('Forecast Final', fmtHH(t.forecast), 'Consumida + Comprometida + Em Aprovação', t.forecast<=t.hhOrcado ? HH_GREEN : HH_RED),
+    kpiCard('Desvio', (t.desvioPct>=0?'+':'')+fmtDec(t.desvioPct,1)+'%', (t.desvio>=0?'+':'')+fmtMilhar(t.desvio,0)+' HH vs. orçado', t.desvioPct<=0 ? HH_GREEN : (t.desvioPct<=5 ? HH_AMBER : HH_RED)),
+    kpiCard('% Utilização', fmtDec(t.pctUtilizado,1)+'%', 'Consumida + Comprometida ÷ Orçamento Atual', t.pctUtilizado<80 ? HH_GREEN : (t.pctUtilizado<95 ? '#F0D060' : (t.pctUtilizado<=100 ? HH_AMBER : HH_RED))),
+  ].join('');
+}
+
+let hhGaugeChart=null, hhWaterfallChart=null, hhDonutChart=null, hhRankingChart=null, hhHeatmapChart=null;
+function renderControleHHCharts(){
+  if(typeof ApexCharts === 'undefined') return;
+  const t = controleHHTotais();
+  if(t.rows.length === 0) return;
+
+  // ---- Gauge: % utilização do orçamento ----
+  const elGauge = document.getElementById('chart-hh-gauge');
+  if(elGauge){
+    if(hhGaugeChart) hhGaugeChart.destroy();
+    const pct = Math.min(140, Math.round(t.pctUtilizado*10)/10);
+    const corGauge = t.pctUtilizado<80 ? HH_GREEN : (t.pctUtilizado<95 ? '#F0D060' : (t.pctUtilizado<=100 ? HH_AMBER : HH_RED));
+    hhGaugeChart = new ApexCharts(elGauge, {
+      chart:{type:'radialBar', height:260, fontFamily:'Inter, sans-serif'},
+      series:[Math.min(100, Math.round(t.pctUtilizado*10)/10)],
+      labels:['Utilizado'],
+      colors:[corGauge],
+      plotOptions:{radialBar:{hollow:{size:'60%'}, dataLabels:{
+        name:{fontSize:'12px', color:'#3E5468'},
+        value:{fontSize:'26px', fontWeight:700, color:'#0F1B2B', formatter:()=> fmtDec(t.pctUtilizado,1)+'%'},
+      }}},
+    });
+    hhGaugeChart.render();
+  }
+
+  // ---- Waterfall (aproximado com barra flutuante): fluxo do orçamento ----
+  const elWf = document.getElementById('chart-hh-waterfall');
+  if(elWf){
+    if(hhWaterfallChart) hhWaterfallChart.destroy();
+    const steps = [
+      {label:'Orçada', delta: t.hhOrcado},
+      {label:'Consumida', delta: -t.hhConsumida},
+      {label:'Comprometida', delta: -t.hhComprometida},
+      {label:'Em Aprovação', delta: -t.hhEmAprovacao},
+    ];
+    let acc = 0;
+    const bars = steps.map((s,i)=>{
+      const start = i===0 ? 0 : acc;
+      acc += s.delta;
+      const end = acc;
+      return { x: s.label, y: [Math.min(start,end), Math.max(start,end)], isTotal: i===0 };
+    });
+    bars.push({x:'Saldo', y:[0, Math.max(0,acc)], isTotal:true});
+    hhWaterfallChart = new ApexCharts(elWf, {
+      chart:{type:'rangeBar', height:260, fontFamily:'Inter, sans-serif', toolbar:{show:false}},
+      series:[{data: bars.map(b=>({x:b.x, y:b.y}))}],
+      plotOptions:{bar:{horizontal:false, borderRadius:4, distributed:true}},
+      colors: bars.map(b=> b.isTotal ? HH_NAVY : HH_AMBER),
+      dataLabels:{enabled:true, formatter:(val)=> fmtMilhar(Math.abs(val[1]-val[0]),0), style:{colors:['#3E5468']}, offsetY:-18},
+      legend:{show:false},
+      xaxis:{labels:{style:{fontSize:'10px'}}},
+      yaxis:{labels:{formatter:(v)=>fmtMilhar(v,0)}},
+      tooltip:{y:{formatter:(v)=>fmtMilhar(v,0)+' HH'}},
+    });
+    hhWaterfallChart.render();
+  }
+
+  // ---- Donut: participação por área ----
+  const elDonut = document.getElementById('chart-hh-donut');
+  if(elDonut){
+    if(hhDonutChart) hhDonutChart.destroy();
+    const porArea = {};
+    t.rows.forEach(r=>{ porArea[r.area] = (porArea[r.area]||0) + r.hh_orcado; });
+    const areas = Object.keys(porArea);
+    hhDonutChart = new ApexCharts(elDonut, {
+      chart:{type:'donut', height:260, fontFamily:'Inter, sans-serif'},
+      series: areas.map(a=>Math.round(porArea[a])),
+      labels: areas,
+      colors:[HH_NAVY, HH_GREEN, HH_AMBER, HH_RED, '#59D1C8', '#B98CE0'],
+      legend:{position:'bottom', fontSize:'11px'},
+      dataLabels:{enabled:true, formatter:(v)=>fmtDec(v,0)+'%'},
+      tooltip:{y:{formatter:(v)=>fmtMilhar(v,0)+' HH'}},
+    });
+    hhDonutChart.render();
+  }
+
+  // ---- Ranking horizontal por especialidade ----
+  const elRank = document.getElementById('chart-hh-ranking');
+  if(elRank){
+    if(hhRankingChart) hhRankingChart.destroy();
+    const porEsp = {};
+    t.rows.forEach(r=>{ const e = r.especialidade || 'Não informado'; porEsp[e] = (porEsp[e]||0) + r.hh_orcado; });
+    const ordenado = Object.entries(porEsp).sort((a,b)=>b[1]-a[1]);
+    hhRankingChart = new ApexCharts(elRank, {
+      chart:{type:'bar', height:260, fontFamily:'Inter, sans-serif', toolbar:{show:false}},
+      series:[{name:'HH Orçado', data: ordenado.map(o=>Math.round(o[1]))}],
+      xaxis:{categories: ordenado.map(o=>o[0])},
+      plotOptions:{bar:{horizontal:true, borderRadius:4, distributed:true, barHeight:'55%'}},
+      colors:[HH_NAVY, HH_GREEN, HH_AMBER, HH_RED, '#59D1C8', '#B98CE0'],
+      dataLabels:{enabled:true, formatter:(v)=>fmtMilhar(v,0), style:{colors:['#fff']}},
+      legend:{show:false},
+      tooltip:{y:{formatter:(v)=>fmtMilhar(v,0)+' HH'}},
+    });
+    hhRankingChart.render();
+  }
+
+  // ---- Heatmap: % utilizado por área x especialidade ----
+  const elHeat = document.getElementById('chart-hh-heatmap');
+  if(elHeat){
+    if(hhHeatmapChart) hhHeatmapChart.destroy();
+    const areas = [...new Set(t.rows.map(r=>r.area))];
+    const especialidades = [...new Set(t.rows.map(r=>r.especialidade).filter(Boolean))];
+    const series = especialidades.map(esp=>({
+      name: esp,
+      data: areas.map(area=>{
+        const r = t.rows.find(x=>x.area===area && x.especialidade===esp);
+        return { x: area, y: r ? Math.round(r.pctUtilizado*10)/10 : 0 };
+      }),
+    }));
+    hhHeatmapChart = new ApexCharts(elHeat, {
+      chart:{type:'heatmap', height:230, fontFamily:'Inter, sans-serif', toolbar:{show:true}},
+      series,
+      dataLabels:{enabled:true, style:{fontSize:'9px'}},
+      colors:[HH_NAVY],
+      plotOptions:{heatmap:{shadeIntensity:0.6, colorScale:{ranges:[
+        {from:0, to:79.9, name:'Normal (<80%)', color:HH_GREEN},
+        {from:80, to:94.9, name:'Atenção (80–95%)', color:'#F0D060'},
+        {from:95, to:100, name:'Elevado (95–100%)', color:HH_AMBER},
+        {from:100.01, to:999, name:'Crítico (>100%)', color:HH_RED},
+      ]}}},
+      tooltip:{y:{formatter:(v)=>v+'%'}},
+    });
+    hhHeatmapChart.render();
+  }
+}
+
+function renderControleHHAlerts(){
+  const el = document.getElementById('hh-alerts-list');
+  if(!el) return;
+  const t = controleHHTotais();
+  const alerts = [];
+  // alertas por área (agregado), não por linha — mais acionável
+  const porArea = {};
+  t.rows.forEach(r=>{
+    if(!porArea[r.area]) porArea[r.area] = {orcado:0, consumida:0, comprometida:0};
+    porArea[r.area].orcado += r.hh_orcado;
+    porArea[r.area].consumida += r.hh_consumida;
+    porArea[r.area].comprometida += r.hh_comprometida;
+  });
+  Object.entries(porArea).forEach(([area, v])=>{
+    if(v.orcado <= 0) return;
+    const pct = ((v.consumida+v.comprometida)/v.orcado)*100;
+    if(pct > 100) alerts.push({level:'crit', icon:'🔴', text:`${area} está acima de 100% do orçamento (${fmtDec(pct,1)}%)`});
+    else if(pct >= 90) alerts.push({level:'warn', icon:'🟠', text:`${area} está acima de 90% do orçamento (${fmtDec(pct,1)}%)`});
+    else if(pct >= 80) alerts.push({level:'attn', icon:'🟡', text:`${area} está acima de 80% do orçamento (${fmtDec(pct,1)}%)`});
+  });
+  if(t.hhAguardando > 0) alerts.push({level:'attn', icon:'⚠', text:`${fmtMilhar(t.hhAguardando,0)} HH aguardando aprovação da Ternium — ainda fora do orçamento aprovado`});
+  if(t.forecast > t.hhOrcado) alerts.push({level:'warn', icon:'⚠', text:`Forecast final (${fmtMilhar(t.forecast,0)} HH) está acima do orçamento (${fmtMilhar(t.hhOrcado,0)} HH) — desvio de ${fmtDec(t.desvioPct,1)}%`});
+  if(t.saldo <= 0) alerts.push({level:'crit', icon:'⚠', text:`Saldo disponível zerado ou negativo (${fmtMilhar(t.saldo,0)} HH) — orçamento já 100% comprometido`});
+
+  if(alerts.length === 0){
+    el.innerHTML = '<p class="panel-note" style="margin:0;">Nenhum alerta no momento — orçamento dentro dos limites normais.</p>';
+    return;
+  }
+  el.innerHTML = alerts.map(a=> `<div class="hh-alert-item ${a.level}"><span>${a.icon}</span><span>${a.text}</span></div>`).join('');
+}
+
+function renderControleHHTable(){
+  const tbody = document.querySelector('#hh-table tbody');
+  const countEl = document.getElementById('hh-table-count');
+  if(!tbody) return;
+  let rows = controleHHCalculated();
+  if(rows.length === 0){
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-lo);">Sem lançamentos ainda — importe a planilha em Configurações → Dados</td></tr>';
+    if(countEl) countEl.textContent = '';
+    return;
+  }
+  if(hhTableSearch){
+    const q = hhTableSearch.toLowerCase();
+    rows = rows.filter(r=> (r.area+' '+r.atividade+' '+(r.especialidade||'')).toLowerCase().includes(q));
+  }
+  if(hhTableSort.key){
+    rows.sort((a,b)=>{
+      const va = a[hhTableSort.key], vb = b[hhTableSort.key];
+      if(typeof va === 'string') return va.localeCompare(vb) * hhTableSort.dir;
+      return ((va||0) - (vb||0)) * hhTableSort.dir;
+    });
+  }
+  tbody.innerHTML = rows.map(r=>{
+    const pctBar = Math.min(100, Math.max(0, r.pctUtilizado));
+    const rowBg = r.status === 'Crítico' ? 'background:rgba(229,72,77,0.08);'
+      : r.status === 'Elevado' ? 'background:rgba(232,176,75,0.10);' : '';
+    return `<tr style="${rowBg}">
+      <td>${r.area}</td>
+      <td>${r.atividade}</td>
+      <td>${r.especialidade||'—'}</td>
+      <td>${fmtMilhar(r.hh_orcado,0)}</td>
+      <td>${fmtMilhar(r.hh_consumida,0)}</td>
+      <td>${fmtMilhar(r.hh_comprometida,0)}</td>
+      <td style="color:${r.saldo>=0?'var(--green)':'var(--red)'};font-weight:700;">${r.saldo>=0?'+':''}${fmtMilhar(r.saldo,0)}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="flex:1;height:8px;background:var(--border-soft);border-radius:4px;overflow:hidden;min-width:60px;">
+            <div style="height:100%;width:${pctBar}%;background:${r.statusColor};"></div>
+          </div>
+          <span style="font-size:11px;font-family:var(--mono);">${fmtDec(r.pctUtilizado,0)}%</span>
+        </div>
+      </td>
+      <td><span class="hh-status-badge" style="background:${r.statusColor}22;color:${r.statusColor};">${r.status}</span></td>
+    </tr>`;
+  }).join('');
+  if(countEl) countEl.textContent = `${rows.length} de ${CONTROLE_HH_ITEMS.length} registros`;
+}
+
+function renderControleHHAreaFilter(){
+  const wrap = document.getElementById('controlehh-area-toggle');
+  if(!wrap) return;
+  const areas = [...new Set(CONTROLE_HH_ITEMS.map(r=>r.area))].sort();
+  if(!areas.includes(hhAreaFiltro) && hhAreaFiltro !== 'geral') hhAreaFiltro = 'geral';
+  wrap.innerHTML = ['geral', ...areas].map(a=>{
+    const label = a === 'geral' ? 'Geral' : a.charAt(0) + a.slice(1).toLowerCase();
+    return `<button class="gran-btn${a===hhAreaFiltro?' active':''}" data-area="${a}">${label}</button>`;
+  }).join('');
+  wrap.querySelectorAll('.gran-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(hhAreaFiltro === btn.dataset.area) return;
+      hhAreaFiltro = btn.dataset.area;
+      wrap.querySelectorAll('.gran-btn').forEach(b=> b.classList.toggle('active', b===btn));
+      renderControleHHKpis();
+      renderControleHHCharts();
+      renderControleHHAlerts();
+      renderControleHHTable();
+    });
+  });
+}
+
+function renderControleHH(){
+  renderControleHHAreaFilter();
+  renderControleHHKpis();
+  renderControleHHCharts();
+  renderControleHHAlerts();
+  renderControleHHTable();
+}
+
+document.getElementById('hh-table-search')?.addEventListener('input', (e)=>{
+  hhTableSearch = e.target.value.trim();
+  renderControleHHTable();
+});
+document.querySelectorAll('#hh-table thead th[data-sort]').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.sort;
+    if(hhTableSort.key === key) hhTableSort.dir *= -1;
+    else { hhTableSort.key = key; hhTableSort.dir = 1; }
+    renderControleHHTable();
+  });
+});
+document.getElementById('hh-export-btn')?.addEventListener('click', async ()=>{
+  const rows = controleHHCalculated();
+  if(rows.length === 0){ showToast('Nada pra exportar ainda', 'err'); return; }
+  const wsData = rows.map(r=>({
+    'Área': r.area, 'Atividade': r.atividade, 'Especialidade': r.especialidade,
+    'HH Orçada': r.hh_orcado, 'HH Consumida': r.hh_consumida, 'HH Comprometida': r.hh_comprometida,
+    'HH em Aprovação': r.hh_em_aprovacao, 'Saldo': r.saldo, 'Forecast': r.forecast,
+    '% Utilizado': Math.round(r.pctUtilizado*10)/10, 'Status': r.status,
+  }));
+  const ws = XLSX.utils.json_to_sheet(wsData);
+  const wbOut = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbOut, ws, 'Controle de HH');
+  XLSX.writeFile(wbOut, 'controle_hh_export.xlsx');
+});
+
+async function fetchControleHHFromSupabase(){
+  try{
+    const {data, error} = await sb.from('controle_hh').select('*');
+    if(error) throw error;
+    CONTROLE_HH_ITEMS = (data || []).map(r=>({
+      area: r.area, atividade: r.atividade, especialidade: r.especialidade,
+      hh_orcado: Number(r.hh_orcado)||0, hh_aguardando_aprovacao: Number(r.hh_aguardando_aprovacao)||0,
+      oc_aprovadas: Number(r.oc_aprovadas)||0, oc_em_aprovacao: Number(r.oc_em_aprovacao)||0,
+      presupuesto_atual: Number(r.presupuesto_atual)||0, hh_consumida: Number(r.hh_consumida)||0,
+      hh_em_aprovacao: Number(r.hh_em_aprovacao)||0, hh_comprometida: Number(r.hh_comprometida)||0,
+    }));
+  } catch(err){
+    console.warn('Tabela controle_hh indisponível:', err);
+    CONTROLE_HH_ITEMS = [];
+  }
+  if(document.getElementById('view-controlehh')?.classList.contains('active')) renderControleHH();
 }
 
 document.getElementById('ganho-download-btn')?.addEventListener('click', async ()=>{
@@ -7102,8 +7565,8 @@ function parseCorteLabel(raw){
 function extractCurvaFromWorkbook(wb){
   const names = wb.SheetNames;
   // aceita "Curva Geral" ou "Cruva Geral" (erro de digitação comum na planilha padrão)
-  const preferred = names.find(n => /cr?uva/i.test(n) && /geral/i.test(n))
-    || names.find(n => /cr?uva/i.test(n))
+  const preferred = names.find(n => /(curva|cruva)/i.test(n) && /geral/i.test(n))
+    || names.find(n => /(curva|cruva)/i.test(n))
     || names[0];
   const ws = wb.Sheets[preferred];
   if(!ws) return null;
@@ -7165,28 +7628,60 @@ document.getElementById('curva-file-input')?.addEventListener('change', async (e
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
     const mensagens = [];
+    let algumaAba = false;
 
+    // planilha única, cada bloco procura sua própria aba dentro do MESMO
+    // arquivo — se uma aba não existir nessa versão específica da planilha,
+    // simplesmente avisa e segue pras outras, sem travar o upload inteiro
     const resultCurva = extractCurvaFromWorkbook(wb);
     if(resultCurva){
       await saveCurvaData(resultCurva.parsed, resultCurva.usedSheet);
       mensagens.push(`✓ Curva S: ${resultCurva.parsed.length} registros`);
+      algumaAba = true;
     } else {
-      mensagens.push('⚠ Curva S: aba "Cruva Geral" (ou "Curva Geral") não encontrada ou em formato inesperado');
+      mensagens.push('⚠ Curva S: aba não encontrada');
     }
 
     const resultEfetivo = extractEfetivoTurnoFromWorkbook(wb);
     if(resultEfetivo){
       await saveEfetivoTurnoData(resultEfetivo.parsed, resultEfetivo.usedSheet);
       mensagens.push(`✓ Efetivo x Turno: ${resultEfetivo.parsed.length} registros`);
+      algumaAba = true;
     } else {
-      mensagens.push('⚠ Efetivo x Turno: aba "Efetivo x Turno" não encontrada ou em formato inesperado');
+      mensagens.push('⚠ Efetivo x Turno: aba não encontrada');
+    }
+
+    const resultFolga = extractFolgaFromWorkbook(wb);
+    if(resultFolga){
+      await saveFolgaData(resultFolga.parsed);
+      mensagens.push(`✓ Folga de Campo: ${resultFolga.parsed.length} dias`);
+      algumaAba = true;
+    } // Folga é opcional — planilhas antigas não têm essa linha, sem alarde se faltar
+
+    const resultGanho = extractGanhoFromWorkbook(wb);
+    if(resultGanho){
+      await saveGanhoData(resultGanho.parsed, resultGanho.terminoPrev, resultGanho.usedSheet);
+      mensagens.push(`✓ Ganho de Horas: ${resultGanho.parsed.length} cortes`);
+      algumaAba = true;
+    } else {
+      mensagens.push('⚠ Ganho de Horas: aba não encontrada');
+    }
+
+    const resultHH = extractControleHHFromWorkbook(wb);
+    if(resultHH){
+      await saveControleHHData(resultHH.parsed, resultHH.usedSheet);
+      mensagens.push(`✓ Controle de HH: ${resultHH.parsed.length} registros`);
+      algumaAba = true;
+    } else {
+      mensagens.push('⚠ Controle de HH: aba não encontrada');
     }
 
     statusEl.textContent = mensagens.join(' · ');
-    if(resultCurva || resultEfetivo) showToast('Cronograma atualizado', 'ok');
+    if(algumaAba) showToast('Planilha geral atualizada', 'ok');
+    else showToast('Nenhuma aba reconhecida nesse arquivo', 'err');
   } catch(err){
     console.error(err);
-    statusEl.textContent = '⚠ Não foi possível carregar a planilha. Verifique se as tabelas "curva_avanco" e "efetivo_turno" existem no banco.';
+    statusEl.textContent = '⚠ Não foi possível carregar a planilha. Verifique a conexão com o banco.';
   } finally {
     e.target.value = '';
   }
@@ -7241,6 +7736,55 @@ function extractEfetivoTurnoFromWorkbook(wb){
 function efetivoTurnoRowToDbRow(r){
   return { data: r.data, turno: r.turno, prev: r.prev, real: r.real };
 }
+
+// ===================================================================
+// IMPORTAÇÃO — FOLGA DE CAMPO (mesma aba "Efetivo x Turno", linha "Folga")
+// Série única por dia (não por turno) — quantas pessoas estavam de folga
+// programada no canteiro naquela data.
+// ===================================================================
+function extractFolgaFromWorkbook(wb){
+  const names = wb.SheetNames;
+  const preferred = names.find(n => /efetivo/i.test(n) && /turno/i.test(n)) || names.find(n => /efetivo/i.test(n));
+  if(!preferred) return null;
+  const ws = wb.Sheets[preferred];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if(!rows || rows.length < 4) return null;
+
+  const rowHeaderIdx = rows.findIndex(r => r && r.some(c => typeof c === 'string' && c.toUpperCase().includes('TURNO')) && r.some(c => c instanceof Date || typeof c === 'number'));
+  if(rowHeaderIdx < 0) return null;
+  const rowHeader = rows[rowHeaderIdx];
+
+  const rowFolgaIdx = rows.findIndex(r => r && r.some(c => typeof c === 'string' && /^folga/i.test(c.trim())));
+  if(rowFolgaIdx < 0) return null; // essa planilha não tem a linha de Folga — tudo bem, é opcional
+  const rowFolga = rows[rowFolgaIdx];
+
+  const parsed = [];
+  for(let c = 1; c < rowHeader.length; c++){
+    const dateVal = rowHeader[c];
+    let dataISO = null;
+    if(dateVal instanceof Date) dataISO = dateVal.toISOString().slice(0,10);
+    else if(typeof dateVal === 'number') dataISO = excelSerialToNaiveISO(dateVal)?.slice(0,10);
+    if(!dataISO) continue;
+    const val = rowFolga[c];
+    if(typeof val !== 'number') continue;
+    parsed.push({ data: dataISO, folga: Math.round(val*100)/100 });
+  }
+  if(parsed.length === 0) return null;
+  return { parsed, usedSheet: preferred };
+}
+function folgaRowToDbRow(r){
+  return { data: r.data, folga: r.folga };
+}
+async function saveFolgaData(parsed){
+  if(dbConnected){
+    const {error: delError} = await sb.from('efetivo_folga').delete().not('data', 'is', null);
+    if(delError) throw delError;
+    await chunkedUpsert('efetivo_folga', parsed.map(folgaRowToDbRow));
+  }
+  EFETIVO_FOLGA_ITEMS = parsed;
+  if(document.getElementById('view-efetivoturno')?.classList.contains('active')) renderEfetivoTurno();
+}
 async function saveEfetivoTurnoData(parsed, usedSheet){
   const statusEl = document.getElementById('efetivoturno-upload-status');
   if(dbConnected){
@@ -7255,6 +7799,106 @@ async function saveEfetivoTurnoData(parsed, usedSheet){
     if(statusEl) statusEl.textContent = `⚠ Sem conexão com o banco — carregado só nesta sessão (${parsed.length} registros)`;
   }
   if(document.getElementById('view-efetivoturno')?.classList.contains('active')) renderEfetivoTurno();
+}
+
+// ===================================================================
+// IMPORTAÇÃO — CONTROLE DE HH (planilha do arquivo geral, aba "Contrele de HH")
+// Layout fixo: uma linha de cabeçalho com os nomes das colunas (tolerante a
+// acentuação/quebra de linha), e uma linha por Solicitud/OT/Especialidade,
+// até a linha "TOTALES" (que é ignorada — os totais são recalculados aqui).
+// ===================================================================
+function normHeader(s){
+  return String(s||'').replace(/\n/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+}
+function extractControleHHFromWorkbook(wb){
+  const names = wb.SheetNames;
+  const preferred = names.find(n => /(contr?ele|controle)/i.test(n) && /hh/i.test(n)) || names.find(n => /hh/i.test(n));
+  if(!preferred) return null;
+  const ws = wb.Sheets[preferred];
+  if(!ws) return null;
+  const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+  if(!rows || rows.length < 3) return null;
+
+  // acha a linha de cabeçalho: a que tem "descrição" e "hh presupuestado" nalguma célula
+  const headerRowIdx = rows.findIndex(r => r && r.some(c=>normHeader(c)==='descrição' || normHeader(c)==='descricao'));
+  if(headerRowIdx < 0) return null;
+  const header = rows[headerRowIdx].map(normHeader);
+  const colIdx = (matcher) => header.findIndex(h => matcher(h));
+  const cEspecialidade = colIdx(h=>h.includes('especialidad'));
+  const cDescricao = colIdx(h=>h==='descrição'||h==='descricao');
+  const cAguardando = colIdx(h=>h.includes('aguardando aprovação ternium'));
+  const cOrcado = colIdx(h=>h==='hh presupuestado'); // exata — a de "aguardando" tem texto extra, não bate aqui
+  const cOcAprovadas = colIdx(h=>h.includes('oc aprobadas'));
+  const cOcEmAprovacao = colIdx(h=>h.includes('oc en aprobación')||h.includes('oc en aprobacion'));
+  const cPresupuestoAtual = colIdx(h=>h.includes('presupuesto act'));
+  const cConsumida = colIdx(h=>h.includes('hh consumidas'));
+  const cEmAprovacao = colIdx(h=>h==='hh en aprobación'||h==='hh en aprobacion');
+  const cComprometida = colIdx(h=>h.includes('hh comprometidas'));
+  if(cDescricao < 0 || cOrcado < 0) return null;
+
+  const num = (v)=>{
+    if(v==null) return 0;
+    if(typeof v === 'number') return v;
+    const n = parseFloat(String(v).replace(',','.'));
+    return isNaN(n) ? 0 : n;
+  };
+
+  const parsed = [];
+  for(let r = headerRowIdx+1; r < rows.length; r++){
+    const row = rows[r];
+    if(!row) continue;
+    const desc = row[cDescricao];
+    if(!desc) continue;
+    // linhas de dado de verdade sempre têm o padrão "X :: X" (caminho duplicado);
+    // linhas de resumo/total (TOTALES, SOMA TOTAL...) não têm — mais robusto do
+    // que tentar prever todo texto de rodapé que a planilha possa usar
+    if(!String(desc).includes('::')) continue;
+    const path = String(desc).split('::')[0].trim();
+    const parts = path.split('|').map(p=>p.trim()).filter(Boolean);
+    if(parts.length === 0) continue;
+    const area = parts[0];
+    const atividade = parts.length > 1 ? parts.slice(1).join(' | ') : parts[0];
+    parsed.push({
+      area, atividade,
+      especialidade: cEspecialidade>=0 ? row[cEspecialidade] : null,
+      solicitud: null, ot: null,
+      hh_aguardando_aprovacao: cAguardando>=0 ? num(row[cAguardando]) : 0,
+      hh_orcado: num(row[cOrcado]),
+      oc_aprovadas: cOcAprovadas>=0 ? num(row[cOcAprovadas]) : 0,
+      oc_em_aprovacao: cOcEmAprovacao>=0 ? num(row[cOcEmAprovacao]) : 0,
+      presupuesto_atual: cPresupuestoAtual>=0 ? num(row[cPresupuestoAtual]) : num(row[cOrcado]),
+      hh_consumida: cConsumida>=0 ? num(row[cConsumida]) : 0,
+      hh_em_aprovacao: cEmAprovacao>=0 ? num(row[cEmAprovacao]) : 0,
+      hh_comprometida: cComprometida>=0 ? num(row[cComprometida]) : 0,
+    });
+  }
+  if(parsed.length === 0) return null;
+  return { parsed, usedSheet: preferred };
+}
+function controleHHRowToDbRow(r){
+  return {
+    area: r.area, atividade: r.atividade, especialidade: r.especialidade,
+    solicitud: r.solicitud, ot: r.ot,
+    hh_aguardando_aprovacao: r.hh_aguardando_aprovacao, hh_orcado: r.hh_orcado,
+    oc_aprovadas: r.oc_aprovadas, oc_em_aprovacao: r.oc_em_aprovacao,
+    presupuesto_atual: r.presupuesto_atual, hh_consumida: r.hh_consumida,
+    hh_em_aprovacao: r.hh_em_aprovacao, hh_comprometida: r.hh_comprometida,
+  };
+}
+async function saveControleHHData(parsed, usedSheet){
+  const statusEl = document.getElementById('controlehh-upload-status');
+  if(dbConnected){
+    if(statusEl) statusEl.textContent = 'Salvando Controle de HH no banco...';
+    const {error: delError} = await sb.from('controle_hh').delete().not('area', 'is', null);
+    if(delError) throw delError;
+    await chunkedUpsert('controle_hh', parsed.map(controleHHRowToDbRow));
+    CONTROLE_HH_ITEMS = parsed;
+    if(statusEl) statusEl.textContent = `✓ Salvo no banco — ${parsed.length} registros (aba "${usedSheet}")`;
+  } else {
+    CONTROLE_HH_ITEMS = parsed;
+    if(statusEl) statusEl.textContent = `⚠ Sem conexão com o banco — carregado só nesta sessão (${parsed.length} registros)`;
+  }
+  if(document.getElementById('view-controlehh')?.classList.contains('active')) renderControleHH();
 }
 
 function extractGanhoFromWorkbook(wb){
@@ -7313,30 +7957,6 @@ async function saveGanhoData(parsed, terminoPrev, usedSheet){
   }
   renderGanho();
 }
-document.getElementById('ganho-upload-btn')?.addEventListener('click', ()=> document.getElementById('ganho-file-input').click());
-document.getElementById('ganho-file-input')?.addEventListener('change', async (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const statusEl = document.getElementById('ganho-upload-status');
-  statusEl.style.display = '';
-  statusEl.textContent = 'Lendo arquivo...';
-  try{
-    const buf = await file.arrayBuffer();
-    const wb = XLSX.read(buf, {type:'array'});
-    const result = extractGanhoFromWorkbook(wb);
-    if(!result){
-      statusEl.textContent = '⚠ Não foi possível reconhecer a planilha. Esperado: aba com as linhas "Término Prev.", "Datas de Corte" e "Atual Corte".';
-      return;
-    }
-    await saveGanhoData(result.parsed, result.terminoPrev, result.usedSheet);
-    showToast('Ganho de Horas atualizado', 'ok');
-  } catch(err){
-    console.error(err);
-    statusEl.textContent = '⚠ Não foi possível carregar a planilha. Verifique se a tabela "ganho_horas" existe no banco.';
-  } finally {
-    e.target.value = '';
-  }
-});
 
 document.getElementById('hist-upload-btn')?.addEventListener('click', ()=> document.getElementById('hist-file-input').click());
 document.getElementById('hist-file-input')?.addEventListener('change', async (e)=>{
@@ -8720,6 +9340,8 @@ function setupRealtime(){
   const fetchCurvaDebounced = debounce(fetchCurvaFromSupabase, 700);
   const fetchGanhoDebounced = debounce(fetchGanhoFromSupabase, 700);
   const fetchEfetivoTurnoDebounced = debounce(fetchEfetivoTurnoFromSupabase, 700);
+  const fetchEfetivoFolgaDebounced = debounce(fetchEfetivoFolgaFromSupabase, 700);
+  const fetchControleHHDebounced = debounce(fetchControleHHFromSupabase, 700);
   sb.channel('curva_avanco-rt')
     .on('postgres_changes', {event:'*', schema:'public', table:'curva_avanco'}, () => fetchCurvaDebounced())
     .subscribe();
@@ -8728,6 +9350,12 @@ function setupRealtime(){
     .subscribe();
   sb.channel('efetivo_turno-rt')
     .on('postgres_changes', {event:'*', schema:'public', table:'efetivo_turno'}, () => fetchEfetivoTurnoDebounced())
+    .subscribe();
+  sb.channel('efetivo_folga-rt')
+    .on('postgres_changes', {event:'*', schema:'public', table:'efetivo_folga'}, () => fetchEfetivoFolgaDebounced())
+    .subscribe();
+  sb.channel('controle_hh-rt')
+    .on('postgres_changes', {event:'*', schema:'public', table:'controle_hh'}, () => fetchControleHHDebounced())
     .subscribe();
 }
 
@@ -8804,6 +9432,8 @@ async function bootstrap(){
   fetchCurvaFromSupabase(); // roda sempre, com ou sem conexão — tem seu próprio fallback
   fetchGanhoFromSupabase(); // idem, para o Ganho de Horas
   fetchEfetivoTurnoFromSupabase(); // idem, para o Efetivo x Turno
+  fetchEfetivoFolgaFromSupabase(); // idem, para a Folga de Campo
+  fetchControleHHFromSupabase(); // idem, para o Controle de HH
   wirePlanoToggle();
   renderCriticalAlert();
   renderExecSummary();
