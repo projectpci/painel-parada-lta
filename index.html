@@ -270,6 +270,8 @@ select:focus, .search-input:focus{border-color:var(--info-blue);}
 .hh-alert-item.warn{border-left-color:#E8B04B;}
 .hh-alert-item.attn{border-left-color:#F0D060;}
 .hh-status-badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em;}
+.hh-panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:960px){ .hh-panels-grid{grid-template-columns:1fr;} }
 .hh-cards-gear-panel{
   display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:60;width:300px;
   background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;
@@ -1681,48 +1683,50 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
     </div>
     <div class="kpi-row" id="kpi-row-controlehh"></div>
 
-    <div class="grid-2col">
-      <div class="panel scroll-reveal">
-        <div class="panel-head"><div class="panel-title">Fluxo do Orçamento (HH)</div></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;position:relative;">
+      <button class="expand-btn" id="hh-panels-gear-btn" data-role-only="admin" title="Configurar gráficos e listas: mostrar/ocultar e reordenar">⚙ Configurar Gráficos</button>
+      <div class="hh-cards-gear-panel" id="hh-panels-gear-panel">
+        <div class="filter-rail-label" style="margin-bottom:8px;">Arraste para reordenar · desligue para ocultar</div>
+        <div id="hh-panels-gear-list"></div>
+      </div>
+    </div>
+
+    <div class="hh-panels-grid" id="hh-panels-grid">
+      <div class="panel scroll-reveal" id="hh-panel-waterfall" data-hh-panel="waterfall">
+        <div class="panel-head"><div class="panel-title">Fluxo do Orçamento Total (HH)</div></div>
         <div id="chart-hh-waterfall" style="margin-top:6px;"></div>
       </div>
-      <div class="panel scroll-reveal">
+      <div class="panel scroll-reveal" id="hh-panel-donut" data-hh-panel="donut">
         <div class="panel-head"><div class="panel-title">Participação por Área</div></div>
         <div id="chart-hh-donut" style="margin-top:6px;"></div>
       </div>
-    </div>
-
-    <div class="grid-2col">
-      <div class="panel scroll-reveal">
-        <div class="panel-head"><div class="panel-title">Ranking por Especialidade — HH Orçado</div></div>
+      <div class="panel scroll-reveal" id="hh-panel-ranking" data-hh-panel="ranking">
+        <div class="panel-head"><div class="panel-title">Ranking por Especialidade — Orçamento Total</div></div>
         <div id="chart-hh-ranking" style="margin-top:10px;"></div>
       </div>
-      <div class="panel scroll-reveal">
+      <div class="panel scroll-reveal" id="hh-panel-heatmap" data-hh-panel="heatmap">
         <div class="panel-head"><div class="panel-title">Heatmap — % Utilizado (Área x Especialidade)</div></div>
         <div id="chart-hh-heatmap" style="margin-top:10px;"></div>
       </div>
-    </div>
-
-    <div class="panel scroll-reveal">
-      <div class="panel-head"><div class="panel-title">🚨 Painel de Alertas</div></div>
-      <div id="hh-alerts-list" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
-    </div>
-
-    <div class="panel scroll-reveal">
-      <div class="panel-head">
-        <div class="panel-title">Matriz Inteligente — Área / Especialidade</div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <input type="text" id="hh-table-search" placeholder="Pesquisar área, atividade, especialidade..." class="database-input" style="color:var(--text-hi);background:var(--surface-2);width:240px;">
-          <button class="expand-btn" id="hh-export-btn">⭳ Exportar Excel</button>
-        </div>
+      <div class="panel scroll-reveal" id="hh-panel-alertas" data-hh-panel="alertas" style="grid-column:1/-1;">
+        <div class="panel-head"><div class="panel-title">🚨 Painel de Alertas</div></div>
+        <div id="hh-alerts-list" style="margin-top:10px;display:flex;flex-direction:column;gap:8px;"></div>
       </div>
-      <div class="table-scroll" style="margin-top:10px;max-height:480px;overflow-y:auto;">
-        <table class="items" id="hh-table">
-          <thead>
-            <tr>
-              <th data-sort="area" style="cursor:pointer;">Área ↕</th>
-              <th data-sort="atividade" style="cursor:pointer;">Atividade ↕</th>
-              <th data-sort="especialidade" style="cursor:pointer;">Especialidade ↕</th>
+      <div class="panel scroll-reveal" id="hh-panel-tabela" data-hh-panel="tabela" style="grid-column:1/-1;">
+        <div class="panel-head">
+          <div class="panel-title">Matriz Inteligente — Área / Especialidade</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="hh-table-search" placeholder="Pesquisar área, atividade, especialidade..." class="database-input" style="color:var(--text-hi);background:var(--surface-2);width:240px;">
+            <button class="expand-btn" id="hh-export-btn">⭳ Exportar Excel</button>
+          </div>
+        </div>
+        <div class="table-scroll" style="margin-top:10px;max-height:480px;overflow-y:auto;">
+          <table class="items" id="hh-table">
+            <thead>
+              <tr>
+                <th data-sort="area" style="cursor:pointer;">Área ↕</th>
+                <th data-sort="atividade" style="cursor:pointer;">Atividade ↕</th>
+                <th data-sort="especialidade" style="cursor:pointer;">Especialidade ↕</th>
               <th data-sort="hh_orcado" style="cursor:pointer;">HH Orçada ↕</th>
               <th data-sort="hh_consumida" style="cursor:pointer;">Consumida ↕</th>
               <th data-sort="hh_comprometida" style="cursor:pointer;">Comprometida ↕</th>
@@ -1735,6 +1739,8 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
         </table>
       </div>
       <p class="panel-note" style="margin:8px 0 0;" id="hh-table-count"></p>
+    </div>
+
     </div>
 
   </div>
@@ -1976,7 +1982,7 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
 
     <div id="docs-onboarding" class="docs-subview active">
       <div class="panel">
-        <div class="panel-head"><div class="panel-title">🚀 Comece por aqui — 5 passos</div></div>
+        <div class="panel-head"><div class="panel-title">🚀 Comece por aqui — 8 passos</div></div>
         <div class="onboarding-steps">
           <div class="onb-step">
             <div class="onb-num">1</div>
@@ -1988,15 +1994,27 @@ table.heatmap .hm-cell{width:44px;height:32px;font-family:var(--mono);color:#0B1
           </div>
           <div class="onb-step">
             <div class="onb-num">3</div>
-            <div class="onb-body"><b>Explore a Curva S</b><p>Mostra o avanço físico acumulado ao longo do tempo — previsto x realizado, por frente (Geral, Caldeira, Conversor).</p></div>
+            <div class="onb-body"><b>Explore a Curva S</b><p>Mostra o avanço físico acumulado ao longo do tempo — previsto x realizado, por frente (Geral, Caldeira, Conversor). Os filtros ficam numa faixa fixa na lateral, com botão pra retrair.</p></div>
           </div>
           <div class="onb-step">
             <div class="onb-num">4</div>
-            <div class="onb-body"><b>Confira o Histograma</b><p>Mão de obra alocada por disciplina, semana a semana — Efetivo (nº de pessoas) ou Horas, Previsto x Realizado.</p></div>
+            <div class="onb-body"><b>Acompanhe o Ganho de Horas</b><p>Caminho crítico da parada — quanto o cronograma está adiantado ou atrasado em relação ao Término Previsto, corte a corte. Alterne entre "Até Data-base" e "Período Completo".</p></div>
           </div>
           <div class="onb-step">
             <div class="onb-num">5</div>
-            <div class="onb-body"><b>Como reportar</b><p>Use "📢 Avisar Atualização" (em Configurações) pra montar uma mensagem pronta com data-base, link e resumo — e "⭳ Exportar" ou "📊 Exportar Excel" pra levar números pra reunião.</p></div>
+            <div class="onb-body"><b>Confira o Histograma e o Efetivo x Turno</b><p>Histograma: mão de obra por disciplina, semana a semana. Efetivo x Turno: efetivo por turno (Prev. x Real), aderência, ranking de turnos e Folga de Campo (rotatividade programada no canteiro).</p></div>
+          </div>
+          <div class="onb-step">
+            <div class="onb-num">6</div>
+            <div class="onb-body"><b>Controle de HH</b><p>Orçamento de horas-homem — orçado, consumido, saldo, extra escopo (OC Em Aprovación) e alertas por área. Administrador pode editar título/contexto dos cards e reordenar cards e gráficos pela engrenagem ⚙.</p></div>
+          </div>
+          <div class="onb-step">
+            <div class="onb-num">7</div>
+            <div class="onb-body"><b>Como atualizar os dados</b><p>Em Configurações → Dados, um único upload de planilha atualiza Curva S, Efetivo x Turno, Ganho de Horas e Controle de HH de uma vez — cada aba do arquivo é reconhecida automaticamente.</p></div>
+          </div>
+          <div class="onb-step">
+            <div class="onb-num">8</div>
+            <div class="onb-body"><b>Como reportar</b><p>Use "📢 Avisar Atualização" (no topo) pra montar uma mensagem pronta com data-base, link e resumo — e "⭳ Exportar" ou "📊 Exportar Excel" pra levar números pra reunião.</p></div>
           </div>
         </div>
         <p class="panel-note" style="margin-top:14px;">Precisa de mais detalhe sobre algum gráfico, coluna ou filtro específico? Clique em "📖 Documentação" acima.</p>
@@ -5806,17 +5824,17 @@ let hhTableSearch = '';
 let hhAreaFiltro = 'geral'; // 'geral' = todas as áreas | ou o nome exato de uma área
 
 function controleHHRowCalc(r){
-  const saldo = r.hh_orcado - r.hh_consumida - r.hh_comprometida;
+  const orcamentoTotal = r.hh_orcado + (r.hh_aguardando_aprovacao||0); // base de cálculo padrão do painel
+  const saldo = orcamentoTotal - r.hh_consumida - r.hh_comprometida;
   const forecast = r.hh_consumida + r.hh_comprometida + r.hh_em_aprovacao;
-  const desvio = forecast - r.hh_orcado;
-  const desvioPct = r.hh_orcado > 0 ? (desvio / r.hh_orcado) * 100 : 0;
-  const base = r.presupuesto_atual > 0 ? r.presupuesto_atual : r.hh_orcado;
-  const pctUtilizado = base > 0 ? ((r.hh_consumida + r.hh_comprometida) / base) * 100 : 0;
+  const desvio = forecast - orcamentoTotal;
+  const desvioPct = orcamentoTotal > 0 ? (desvio / orcamentoTotal) * 100 : 0;
+  const pctUtilizado = orcamentoTotal > 0 ? ((r.hh_consumida + r.hh_comprometida) / orcamentoTotal) * 100 : 0;
   let status = 'Normal', statusColor = HH_GREEN;
   if(pctUtilizado > 100){ status = 'Crítico'; statusColor = HH_RED; }
   else if(pctUtilizado >= 95){ status = 'Elevado'; statusColor = HH_AMBER; }
   else if(pctUtilizado >= 80){ status = 'Atenção'; statusColor = '#F0D060'; }
-  return {...r, saldo, forecast, desvio, desvioPct, pctUtilizado, status, statusColor};
+  return {...r, orcamentoTotal, saldo, forecast, desvio, desvioPct, pctUtilizado, status, statusColor};
 }
 function controleHHCalculated(){
   const base = hhAreaFiltro === 'geral' ? CONTROLE_HH_ITEMS : CONTROLE_HH_ITEMS.filter(r => r.area === hhAreaFiltro);
@@ -5969,21 +5987,96 @@ async function fetchHHCardsConfig(){
   if(custom && typeof custom === 'object') state.hhCardsCustom = custom;
 }
 
+// ---- engrenagem dos PAINÉIS (gráficos e listas): ocultar/exibir e arrastar ----
+const HH_PANEL_ORDER_DEFAULT = ['waterfall','donut','ranking','heatmap','alertas','tabela'];
+const HH_PANEL_LABELS = {
+  waterfall:'Fluxo do Orçamento Total (HH)', donut:'Participação por Área',
+  ranking:'Ranking por Especialidade', heatmap:'Heatmap — % Utilizado',
+  alertas:'🚨 Painel de Alertas', tabela:'Matriz Inteligente',
+};
+state.hhPanelsOrder = [...HH_PANEL_ORDER_DEFAULT];
+state.hhPanelsHidden = new Set();
+
+function applyHHPanelsLayout(){
+  state.hhPanelsOrder.forEach((id, idx)=>{
+    const el = document.getElementById('hh-panel-' + id);
+    if(!el) return;
+    el.style.order = idx;
+    el.style.display = state.hhPanelsHidden.has(id) ? 'none' : '';
+  });
+}
+function renderHHPanelsGearPanel(){
+  const wrap = document.getElementById('hh-panels-gear-list');
+  if(!wrap) return;
+  wrap.innerHTML = state.hhPanelsOrder.map(id=>{
+    const hidden = state.hhPanelsHidden.has(id);
+    return `<div class="hh-card-gear-row" draggable="true" data-id="${id}">
+      <span class="hh-card-gear-handle">⠿</span>
+      <span class="hh-card-gear-label">${HH_PANEL_LABELS[id]||id}</span>
+      <label class="pt-switch"><input type="checkbox" class="hh-panel-gear-toggle" data-id="${id}" ${hidden?'':'checked'}><span class="pt-slider"></span></label>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('.hh-panel-gear-toggle').forEach(inp=>{
+    inp.addEventListener('change', ()=>{
+      const id = inp.dataset.id;
+      if(inp.checked) state.hhPanelsHidden.delete(id); else state.hhPanelsHidden.add(id);
+      saveConfig('hh_panels_hidden', Array.from(state.hhPanelsHidden));
+      applyHHPanelsLayout();
+    });
+  });
+
+  let draggingId = null;
+  wrap.querySelectorAll('.hh-card-gear-row').forEach(row=>{
+    row.addEventListener('dragstart', ()=>{ draggingId = row.dataset.id; row.classList.add('dragging'); });
+    row.addEventListener('dragend', ()=>{ row.classList.remove('dragging'); });
+    row.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      if(!draggingId || draggingId === row.dataset.id) return;
+      const fromIdx = state.hhPanelsOrder.indexOf(draggingId);
+      const toIdx = state.hhPanelsOrder.indexOf(row.dataset.id);
+      if(fromIdx < 0 || toIdx < 0) return;
+      state.hhPanelsOrder.splice(fromIdx, 1);
+      state.hhPanelsOrder.splice(toIdx, 0, draggingId);
+      renderHHPanelsGearPanel();
+      applyHHPanelsLayout();
+      saveConfig('hh_panels_ordem', state.hhPanelsOrder);
+    });
+  });
+}
+document.getElementById('hh-panels-gear-btn')?.addEventListener('click', ()=>{
+  document.getElementById('hh-panels-gear-panel')?.classList.toggle('open');
+  renderHHPanelsGearPanel();
+});
+document.addEventListener('click', (e)=>{
+  const panel = document.getElementById('hh-panels-gear-panel');
+  const btn = document.getElementById('hh-panels-gear-btn');
+  if(panel && panel.classList.contains('open') && !panel.contains(e.target) && e.target !== btn) panel.classList.remove('open');
+});
+async function fetchHHPanelsConfig(){
+  const order = await fetchConfig('hh_panels_ordem');
+  if(Array.isArray(order) && order.length) state.hhPanelsOrder = [...order, ...HH_PANEL_ORDER_DEFAULT.filter(id=>!order.includes(id))];
+  const hidden = await fetchConfig('hh_panels_hidden');
+  if(Array.isArray(hidden)) state.hhPanelsHidden = new Set(hidden);
+  applyHHPanelsLayout();
+}
+
 let hhWaterfallChart=null, hhDonutChart=null, hhRankingChart=null, hhHeatmapChart=null;
 function renderControleHHCharts(){
   if(typeof ApexCharts === 'undefined') return;
   const t = controleHHTotais();
   if(t.rows.length === 0) return;
 
-  // ---- Waterfall (aproximado com barra flutuante): fluxo do orçamento ----
+  // ---- Waterfall (aproximado com barra flutuante): fluxo do Orçamento Total ----
   const elWf = document.getElementById('chart-hh-waterfall');
   if(elWf){
     if(hhWaterfallChart) hhWaterfallChart.destroy();
+    const orcamentoTotal = t.hhOrcado + t.hhAguardando;
     const steps = [
-      {label:'Orçada', delta: t.hhOrcado},
-      {label:'Consumida', delta: -t.hhConsumida},
-      {label:'Comprometida', delta: -t.hhComprometida},
-      {label:'Em Aprovação', delta: -t.hhEmAprovacao},
+      {label:'Soma Total (Orçado + Aguardando)', delta: orcamentoTotal},
+      {label:'HH Consumida', delta: -t.hhConsumida},
+      {label:'HH Comprometida', delta: -t.hhComprometida},
+      {label:'HH em Aprovação', delta: -t.hhEmAprovacao},
     ];
     let acc = 0;
     const bars = steps.map((s,i)=>{
@@ -5992,7 +6085,7 @@ function renderControleHHCharts(){
       const end = acc;
       return { x: s.label, y: [Math.min(start,end), Math.max(start,end)], isTotal: i===0 };
     });
-    bars.push({x:'Saldo', y:[0, Math.max(0,acc)], isTotal:true});
+    bars.push({x:'Saldo Total Contrato', y:[0, Math.max(0,acc)], isTotal:true});
     hhWaterfallChart = new ApexCharts(elWf, {
       chart:{type:'rangeBar', height:260, fontFamily:'Inter, sans-serif', toolbar:{show:false}},
       series:[{data: bars.map(b=>({x:b.x, y:b.y}))}],
@@ -6026,16 +6119,16 @@ function renderControleHHCharts(){
     hhDonutChart.render();
   }
 
-  // ---- Ranking horizontal por especialidade ----
+  // ---- Ranking horizontal por especialidade — Orçamento Total (orçado+aguardando) ----
   const elRank = document.getElementById('chart-hh-ranking');
   if(elRank){
     if(hhRankingChart) hhRankingChart.destroy();
     const porEsp = {};
-    t.rows.forEach(r=>{ const e = r.especialidade || 'Não informado'; porEsp[e] = (porEsp[e]||0) + r.hh_orcado; });
+    t.rows.forEach(r=>{ const e = r.especialidade || 'Não informado'; porEsp[e] = (porEsp[e]||0) + r.hh_orcado + (r.hh_aguardando_aprovacao||0); });
     const ordenado = Object.entries(porEsp).sort((a,b)=>b[1]-a[1]);
     hhRankingChart = new ApexCharts(elRank, {
       chart:{type:'bar', height:260, fontFamily:'Inter, sans-serif', toolbar:{show:false}},
-      series:[{name:'HH Orçado', data: ordenado.map(o=>Math.round(o[1]))}],
+      series:[{name:'Orçamento Total', data: ordenado.map(o=>Math.round(o[1]))}],
       xaxis:{categories: ordenado.map(o=>o[0])},
       plotOptions:{bar:{horizontal:true, borderRadius:4, distributed:true, barHeight:'55%'}},
       colors:[HH_NAVY, HH_GREEN, HH_AMBER, HH_RED, '#59D1C8', '#B98CE0'],
@@ -6081,24 +6174,29 @@ function renderControleHHAlerts(){
   if(!el) return;
   const t = controleHHTotais();
   const alerts = [];
-  // alertas por área (agregado), não por linha — mais acionável
+  const orcamentoTotal = t.hhOrcado + t.hhAguardando;
+  const saldoTotalContrato = orcamentoTotal - t.hhConsumida;
+  // alertas por área (agregado), não por linha — mais acionável. Base de
+  // cálculo = orçamento total (orçado + aguardando aprovação), não só orçado.
   const porArea = {};
   t.rows.forEach(r=>{
-    if(!porArea[r.area]) porArea[r.area] = {orcado:0, consumida:0, comprometida:0};
+    if(!porArea[r.area]) porArea[r.area] = {orcado:0, aguardando:0, consumida:0, comprometida:0};
     porArea[r.area].orcado += r.hh_orcado;
+    porArea[r.area].aguardando += (r.hh_aguardando_aprovacao||0);
     porArea[r.area].consumida += r.hh_consumida;
     porArea[r.area].comprometida += r.hh_comprometida;
   });
   Object.entries(porArea).forEach(([area, v])=>{
-    if(v.orcado <= 0) return;
-    const pct = ((v.consumida+v.comprometida)/v.orcado)*100;
-    if(pct > 100) alerts.push({level:'crit', icon:'🔴', text:`${area} está acima de 100% do orçamento (${fmtDec(pct,1)}%)`});
-    else if(pct >= 90) alerts.push({level:'warn', icon:'🟠', text:`${area} está acima de 90% do orçamento (${fmtDec(pct,1)}%)`});
-    else if(pct >= 80) alerts.push({level:'attn', icon:'🟡', text:`${area} está acima de 80% do orçamento (${fmtDec(pct,1)}%)`});
+    const totalArea = v.orcado + v.aguardando;
+    if(totalArea <= 0) return;
+    const pct = ((v.consumida+v.comprometida)/totalArea)*100;
+    if(pct > 100) alerts.push({level:'crit', icon:'🔴', text:`${area} está acima de 100% do orçamento total (${fmtDec(pct,1)}%)`});
+    else if(pct >= 90) alerts.push({level:'warn', icon:'🟠', text:`${area} está acima de 90% do orçamento total (${fmtDec(pct,1)}%)`});
+    else if(pct >= 80) alerts.push({level:'attn', icon:'🟡', text:`${area} está acima de 80% do orçamento total (${fmtDec(pct,1)}%)`});
   });
-  if(t.hhAguardando > 0) alerts.push({level:'attn', icon:'⚠', text:`${fmtMilhar(t.hhAguardando,0)} HH aguardando aprovação da Ternium — ainda fora do orçamento aprovado`});
-  if(t.forecast > t.hhOrcado) alerts.push({level:'warn', icon:'⚠', text:`Forecast final (${fmtMilhar(t.forecast,0)} HH) está acima do orçamento (${fmtMilhar(t.hhOrcado,0)} HH) — desvio de ${fmtDec(t.desvioPct,1)}%`});
-  if(t.saldo <= 0) alerts.push({level:'crit', icon:'⚠', text:`Saldo disponível zerado ou negativo (${fmtMilhar(t.saldo,0)} HH) — orçamento já 100% comprometido`});
+  if(t.hhAguardando > 0) alerts.push({level:'attn', icon:'⚠', text:`${fmtMilhar(t.hhAguardando,0)} HH aguardando aprovação da Ternium — já contabilizado no Orçamento Total, mas ainda não aprovado formalmente`});
+  if(t.ocEmAprovacao > 0) alerts.push({level:'warn', icon:'⚠', text:`${fmtMilhar(t.ocEmAprovacao,0)} HH em OC Em Aprovación (Extra Escopo) — fora do orçamento original`});
+  if(saldoTotalContrato <= 0) alerts.push({level:'crit', icon:'⚠', text:`Saldo Total Contrato zerado ou negativo (${fmtMilhar(saldoTotalContrato,0)} HH) — Orçamento Total (${fmtMilhar(orcamentoTotal,0)} HH) já consumido por inteiro`});
 
   if(alerts.length === 0){
     el.innerHTML = '<p class="panel-note" style="margin:0;">Nenhum alerta no momento — orçamento dentro dos limites normais.</p>';
@@ -6177,6 +6275,7 @@ function renderControleHHAreaFilter(){
 }
 
 function renderControleHH(){
+  applyHHPanelsLayout();
   renderControleHHAreaFilter();
   renderControleHHKpis();
   renderControleHHCharts();
@@ -9562,6 +9661,7 @@ async function bootstrap(){
   fetchEfetivoFolgaFromSupabase(); // idem, para a Folga de Campo
   fetchControleHHFromSupabase(); // idem, para o Controle de HH
   fetchHHCardsConfig().then(()=>{ if(document.getElementById('view-controlehh')?.classList.contains('active')) renderControleHHKpis(); });
+  fetchHHPanelsConfig();
   wirePlanoToggle();
   renderCriticalAlert();
   renderExecSummary();
